@@ -28,8 +28,11 @@
 
 body {
   margin: 0;
-  background: var(--bg);
   color: var(--text);
+  background:
+    linear-gradient(180deg, rgba(6, 8, 14, 0.72), rgba(6, 8, 14, 0.86)),
+    url('/background.jpg') center / cover no-repeat fixed;
+  background-color: var(--bg);
 }
 
 #root {
