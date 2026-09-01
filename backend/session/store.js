@@ -4,7 +4,8 @@ function emptySession() {
   return {
     activeCompanyId: null,
     activePositionId: null,
-    profileSummary: null,
+    coverLetterSummary: null,
+    portfolioSummary: null,
     lastGapAnalysis: null,
     lastIssues: null,
     completed: new Set(),

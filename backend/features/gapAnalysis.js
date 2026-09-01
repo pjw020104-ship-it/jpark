@@ -2,19 +2,28 @@ import { generateText } from "../lib/llm.js";
 import { redact } from "../profile/redact.js";
 import { stripForbidden } from "./guard.js";
 
-const SYSTEM = `당신은 한화그룹 지원자의 이력서를 특정 직무의 요구 역량과 비교하는 도우미입니다.
+const SYSTEM = `당신은 한화그룹 지원자의 자기소개서·포트폴리오를 특정 직무 기준으로 분석하는 도우미입니다.
 
 절대 규칙:
 - 점수, 백분율, 합격 가능성, 순위, "적합도" 같은 표현을 절대 출력하지 마세요.
-- 강점 판정에는 반드시 이력서 원문 근거(인용)를 포함하세요. 근거 없는 칭찬은 금지입니다.
-- "미보유" 항목은 지적으로 끝내지 말고 지금부터 준비 가능한 현실적 대안을 반드시 붙이세요.
-- 이력서에 없는 경험을 지어내지 마세요.
+- 지원자가 직접 제공하지 않은 경험이나 성과를 만들어내지 마세요.
+- 강점 판정에는 반드시 근거가 되는 경험을 함께 제시하세요.
+- 각 항목은 500자 이내로 작성하세요.
 
-아래 JSON 형식으로만 답하세요 (마크다운 코드펜스 없이 순수 JSON):
+## 처리 순서
+1) 지원자가 제공한 경험 단위를 추출합니다. 각 경험에서 상황/역할/문제/행동/사용한 기술 또는 지식/결과/성과/배운 점을 뽑습니다.
+2) 각 경험이 해당 직무에서 어떤 역량을 증명하는지 분석합니다 (직무 연관성, 활용 가능한 역량, 추천 활용도: 높음/중간/낮음, 자기소개서 활용 포인트, 면접 활용 포인트).
+3) 강점/부족한 역량/보유하나 표현되지 않은 역량을 분석합니다. 강점에는 근거 경험, 연관 요구사항, 자기소개서 표현 제안을 포함하세요.
+
+아래 JSON 형식으로만 답하세요 (코드펜스 없이 순수 JSON):
 {
-  "strengths": [{"skill": "...", "evidence": "이력서 인용문"}],
-  "gaps": [{"skill": "...", "how_to_improve": "..."}],
-  "missing": [{"skill": "...", "alternative": "..."}]
+  "experiences": [
+    { "title": "경험 이름", "situation": "...", "role": "...", "problem": "...", "action": "...", "skill": "...", "result": "...", "achievement": "...", "lesson": "...",
+      "job_relevance": "...", "applicable_skills": ["..."], "recommended_use": "높음|중간|낮음", "resume_point": "...", "interview_point": "..." }
+  ],
+  "strengths": [{ "skill": "...", "evidence_experience": "...", "requirement_link": "...", "resume_expression": "..." }],
+  "gaps": ["부족한 역량 설명"],
+  "hidden_strengths": ["보유하나 표현되지 않은 역량 설명"]
 }`;
 
 function parseJsonLoose(text) {
@@ -26,59 +35,78 @@ function parseJsonLoose(text) {
   }
 }
 
-export async function analyzeGap({ role, profileText, generate = generateText }) {
-  if (!profileText || !profileText.trim()) {
+export async function analyzeGap({ role, coverLetterText, portfolioText, generate = generateText }) {
+  if (!coverLetterText || !coverLetterText.trim()) {
     return {
       blocks: [],
       sources: [],
       state: "needs_profile",
-      notice: "이력서 또는 간단 프로필 입력이 필요합니다",
+      notice: "역량 진단을 위해 자기소개서(선택: 포트폴리오)를 입력해주세요",
     };
   }
 
-  const requiredSkills = role?.common?.required_skills ?? [];
-  const preferredSkills = role?.common?.preferred_skills ?? [];
+  const redactedCoverLetter = redact(coverLetterText);
+  const redactedPortfolio = portfolioText && portfolioText.trim() ? redact(portfolioText) : "";
 
-  if (requiredSkills.length === 0 && preferredSkills.length === 0) {
-    return {
-      blocks: [],
-      sources: [],
-      state: "fallback",
-      notice: "해당 직무의 역량 기준 정보가 아직 준비되지 않았습니다",
-    };
-  }
-
-  const redacted = redact(profileText);
-
-  const prompt = `직무: ${role.name_ko}
-요구 역량: ${JSON.stringify(requiredSkills)}
-우대 역량: ${JSON.stringify(preferredSkills)}
-지원자 이력서(민감정보 마스킹됨):
-${redacted}`;
+  const prompt = [
+    `직무: ${role.name_ko}`,
+    `자기소개서(민감정보 마스킹됨):\n${redactedCoverLetter}`,
+    redactedPortfolio ? `포트폴리오(민감정보 마스킹됨):\n${redactedPortfolio}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 
   const raw = await generate({ system: SYSTEM, prompt });
-  const parsed = parseJsonLoose(raw) ?? { strengths: [], gaps: [], missing: [] };
+  const parsed = parseJsonLoose(raw) ?? { experiences: [], strengths: [], gaps: [], hidden_strengths: [] };
 
-  const blocks = [
-    {
-      label: "[강점]",
+  const blocks = [];
+
+  for (const exp of parsed.experiences ?? []) {
+    blocks.push({
+      label: `[경험 분석] ${exp.title ?? ""}`,
       content: stripForbidden(
-        (parsed.strengths ?? []).map((s) => `${s.skill}: ${s.evidence}`).join("\n") || "확인된 강점이 없습니다.",
+        [
+          `상황: ${exp.situation ?? ""}`,
+          `역할: ${exp.role ?? ""}`,
+          `문제: ${exp.problem ?? ""}`,
+          `행동: ${exp.action ?? ""}`,
+          `사용한 기술/지식: ${exp.skill ?? ""}`,
+          `결과: ${exp.result ?? ""}`,
+          `성과: ${exp.achievement ?? ""}`,
+          `배운 점: ${exp.lesson ?? ""}`,
+        ].join("\n"),
       ),
-    },
-    {
-      label: "[보완 필요]",
+    });
+    blocks.push({
+      label: `[역량 매핑] ${exp.title ?? ""}`,
       content: stripForbidden(
-        (parsed.gaps ?? []).map((g) => `${g.skill}: ${g.how_to_improve}`).join("\n") || "해당 없음",
+        [
+          `직무 연관성: ${exp.job_relevance ?? ""}`,
+          `활용 가능한 역량: ${(exp.applicable_skills ?? []).join(", ")}`,
+          `추천 활용도: ${exp.recommended_use ?? ""}`,
+          `자기소개서 활용 포인트: ${exp.resume_point ?? ""}`,
+          `면접 활용 포인트: ${exp.interview_point ?? ""}`,
+        ].join("\n"),
       ),
-    },
-    {
-      label: "[미보유]",
-      content: stripForbidden(
-        (parsed.missing ?? []).map((m) => `${m.skill}: ${m.alternative}`).join("\n") || "해당 없음",
-      ),
-    },
-  ];
+    });
+  }
+
+  blocks.push({
+    label: "[강점]",
+    content: stripForbidden(
+      (parsed.strengths ?? [])
+        .map((s) => `- ${s.skill}\n  근거 경험: ${s.evidence_experience}\n  연관 요구사항: ${s.requirement_link}\n  자기소개서 표현 제안: ${s.resume_expression}`)
+        .join("\n\n") || "확인된 강점이 없습니다.",
+    ),
+  });
+  blocks.push({
+    label: "[부족한 역량]",
+    content: stripForbidden((parsed.gaps ?? []).join("\n") || "해당 없음"),
+  });
+  blocks.push({
+    label: "[보유하나 표현되지 않은 역량]",
+    content: stripForbidden((parsed.hidden_strengths ?? []).join("\n") || "해당 없음"),
+  });
 
   return { blocks, sources: [], state: "ok" };
 }

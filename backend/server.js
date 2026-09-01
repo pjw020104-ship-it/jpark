@@ -114,7 +114,7 @@ const today = () => new Date().toISOString().slice(0, 10);
 
 // §4.5: 직무 4버튼 라우팅. 기능 로직은 features/*.js에 위임하고 여기서는 라우팅만 한다.
 app.post("/api/action", async (req, res) => {
-  const { session_id, action, company_id, position_id, profile_text } = req.body;
+  const { session_id, action, company_id, position_id, cover_letter_text, portfolio_text } = req.body;
 
   if (!session_id || !action) {
     return res.status(400).json({ error: "session_id, action이 필요합니다." });
@@ -144,23 +144,29 @@ app.post("/api/action", async (req, res) => {
         break;
 
       case "skill_gap": {
-        const text = profile_text ?? session.profileSummary;
-        if (profile_text) session.profileSummary = profile_text;
-        result = await analyzeGap({ role: found.role, profileText: text });
+        const coverLetterText = cover_letter_text ?? session.coverLetterSummary;
+        const portfolioText = portfolio_text ?? session.portfolioSummary;
+        if (cover_letter_text) session.coverLetterSummary = cover_letter_text;
+        if (portfolio_text) session.portfolioSummary = portfolio_text;
+        result = await analyzeGap({ role: found.role, coverLetterText, portfolioText });
         if (result.state === "ok") session.lastGapAnalysis = result;
         break;
       }
 
       case "job_issues":
-        result = getJobIssues({ companyId: company.id, roleId: found.role.id });
+        result = getJobIssues({
+          companyId: company.id,
+          companyName: company.name_ko,
+          roleId: found.role.id,
+          roleName: found.role.name_ko,
+        });
         if (result.state === "ok") session.lastIssues = result;
         break;
 
       case "interview_questions":
         result = await generateInterviewQuestions({
           role: found.role,
-          gapAnalysis: session.lastGapAnalysis,
-          issuesResult: session.lastIssues,
+          coverLetterText: session.coverLetterSummary,
         });
         break;
 
