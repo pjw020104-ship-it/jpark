@@ -4,6 +4,7 @@ import remarkGfm from 'remark-gfm'
 import hanwhaLogo from './assets/hanwha_logo.png'
 import ActionMenu, { type ActionKey, type ActionResult } from './components/ActionMenu'
 import ActionResultView from './components/ActionResultView'
+import IntroSplash from './components/IntroSplash'
 import { shouldShowActionMenu } from './lib/actionTrigger'
 import './App.css'
 
@@ -215,7 +216,9 @@ function App() {
   }
 
   return (
-    <div className="app">
+    <>
+      <IntroSplash />
+      <div className="app">
       <header className="header">
         <div className="header-top">
           <div className="brand">
@@ -340,7 +343,8 @@ function App() {
           {isStreaming ? '답변 중...' : '전송'}
         </button>
       </form>
-    </div>
+      </div>
+    </>
   )
 }
 
