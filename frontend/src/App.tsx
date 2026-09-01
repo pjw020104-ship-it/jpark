@@ -16,8 +16,7 @@ type Message = {
 }
 
 type Company = { id: string; name_ko: string }
-type JobRole = { id: string; name_ko: string }
-type JobFamily = { id: string; name_ko: string; roles: JobRole[] }
+type Job = { id: string; name_ko: string }
 
 const CUSTOM_COMPANY_VALUE = '__custom__'
 
@@ -58,7 +57,7 @@ function App() {
   const [sessionId] = useState<string>(loadOrCreateSessionId)
 
   const [companies, setCompanies] = useState<Company[]>([])
-  const [jobFamilies, setJobFamilies] = useState<JobFamily[]>([])
+  const [jobs, setJobs] = useState<Job[]>([])
 
   const [companyId, setCompanyId] = useState<string>('')
   const [customCompany, setCustomCompany] = useState('')
@@ -72,7 +71,7 @@ function App() {
   const abortRef = useRef<AbortController | null>(null)
   const chatEndRef = useRef<HTMLDivElement>(null)
 
-  // §9: 계열사/직무명을 코드에 하드코딩하지 않고 data/*.json 기반 API에서 받아온다.
+  // §9: 계열사명을 코드에 하드코딩하지 않고 data/*.json 기반 API에서 받아온다.
   useEffect(() => {
     fetch('/api/organizations')
       .then((r) => r.json())
@@ -81,12 +80,20 @@ function App() {
         if (data.companies?.[0]) setCompanyId(data.companies[0].id)
       })
       .catch(() => setCompanies([]))
-
-    fetch('/api/job-families')
-      .then((r) => r.json())
-      .then((data) => setJobFamilies(data.families ?? []))
-      .catch(() => setJobFamilies([]))
   }, [])
+
+  // 회사별 실제 직무명(Job_name.txt 기반)을 회사가 바뀔 때마다 다시 받아온다.
+  useEffect(() => {
+    if (!companyId || companyId === CUSTOM_COMPANY_VALUE) {
+      setJobs([])
+      return
+    }
+    fetch(`/api/jobs?company_id=${encodeURIComponent(companyId)}`)
+      .then((r) => r.json())
+      .then((data) => setJobs(data.jobs ?? []))
+      .catch(() => setJobs([]))
+    setJobTitle('')
+  }, [companyId])
 
   useEffect(() => {
     try {
@@ -99,8 +106,6 @@ function App() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
-
-  const allRoles = jobFamilies.flatMap((f) => f.roles)
 
   const sendMessage = async (text: string) => {
     const trimmed = text.trim()
@@ -185,7 +190,7 @@ function App() {
     if (!job || !resolvedCompanyName || isStreaming) return
 
     // §4.5 트리거: company_id + position_id가 모두 정확히 확정될 때만 버튼 메뉴를 연결한다.
-    const matchedRole = allRoles.find((r) => r.name_ko === job)
+    const matchedRole = jobs.find((r) => r.name_ko === job)
     const nextEntryIndex = entries.length
     if (shouldShowActionMenu(companyId, matchedRole?.id) && companyId !== CUSTOM_COMPANY_VALUE) {
       setResolvedMeta((prev) => ({ ...prev, [nextEntryIndex]: { companyId, positionId: matchedRole!.id } }))
@@ -269,15 +274,15 @@ function App() {
           </button>
         </div>
         <div className="job-chips">
-          {jobFamilies.map((family) => (
+          {jobs.map((job) => (
             <button
               type="button"
-              key={family.id}
+              key={job.id}
               className="chip"
-              onClick={() => setJobTitle(family.roles[0]?.name_ko ?? family.name_ko)}
+              onClick={() => setJobTitle(job.name_ko)}
               disabled={isStreaming}
             >
-              {family.name_ko}
+              {job.name_ko}
             </button>
           ))}
         </div>
