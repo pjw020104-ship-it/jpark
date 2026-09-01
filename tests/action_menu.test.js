@@ -13,8 +13,6 @@ const EMPTY_ROLE = {
   name_ko: "테스트 직무",
   common: {
     scenario_seeds: [],
-    required_skills: [],
-    preferred_skills: [],
     interview_themes: [],
     what_you_do: [],
   },
@@ -43,31 +41,32 @@ describe("§4.1 직무 설명 (scenario)", () => {
   });
 });
 
-describe("§4.2 이력서 기반 역량 갭 분석", () => {
-  const ROLE_WITH_SKILLS = {
-    id: "finance.treasury",
-    name_ko: "재무",
-    common: {
-      required_skills: ["엑셀 재무모델링"],
-      preferred_skills: ["CFA"],
-    },
-  };
+describe("§4.2 역량 진단 (gap analysis)", () => {
+  const ROLE = { id: "finance.treasury", name_ko: "재무" };
 
-  it("이력서/프로필이 없으면 state=needs_profile이다", async () => {
-    const result = await analyzeGap({ role: ROLE_WITH_SKILLS, profileText: "" });
+  it("자기소개서가 없으면 state=needs_profile이다", async () => {
+    const result = await analyzeGap({ role: ROLE, coverLetterText: "" });
     expect(result.state).toBe("needs_profile");
   });
 
   it("응답에 숫자+% 패턴이나 '적합도', '합격 가능성' 문자열이 없다", async () => {
     const generate = vi.fn().mockResolvedValue(
       JSON.stringify({
-        strengths: [{ skill: "엑셀 재무모델링", evidence: "적합도 78%로 매우 우수함" }],
-        gaps: [{ skill: "CFA", how_to_improve: "합격 가능성을 높이려면 자격증을 취득하세요" }],
-        missing: [],
+        experiences: [],
+        strengths: [
+          {
+            skill: "엑셀 재무모델링",
+            evidence_experience: "인턴 경험",
+            requirement_link: "적합도 78%로 매우 우수함",
+            resume_expression: "합격 가능성을 높이려면 이렇게 쓰세요",
+          },
+        ],
+        gaps: [],
+        hidden_strengths: [],
       }),
     );
 
-    const result = await analyzeGap({ role: ROLE_WITH_SKILLS, profileText: "경력 5년", generate });
+    const result = await analyzeGap({ role: ROLE, coverLetterText: "경력 5년", generate });
     const joined = result.blocks.map((b) => b.content).join("\n");
 
     expect(containsForbiddenPattern(joined)).toBe(false);
@@ -86,10 +85,10 @@ describe("§4.2 이력서 기반 역량 갭 분석", () => {
     let capturedPrompt = "";
     const generate = vi.fn().mockImplementation(async ({ prompt }) => {
       capturedPrompt = prompt;
-      return JSON.stringify({ strengths: [], gaps: [], missing: [] });
+      return JSON.stringify({ experiences: [], strengths: [], gaps: [], hidden_strengths: [] });
     });
 
-    await analyzeGap({ role: ROLE_WITH_SKILLS, profileText: rawResume, generate });
+    await analyzeGap({ role: ROLE, coverLetterText: rawResume, generate });
 
     expect(capturedPrompt).not.toContain("서울대학교");
     expect(capturedPrompt).not.toContain("1999-03-02");
@@ -127,52 +126,78 @@ describe("§4.4 직무 이슈 분석", () => {
     expect(active.map((i) => i.id)).toEqual(["has-source"]);
   });
 
-  it("이슈 데이터가 없으면 state=fallback이다", () => {
-    const result = getJobIssues({ companyId: "hanwha-aerospace", roleId: "rnd-design.general", loadIssues: () => [] });
+  it("이슈 데이터가 없으면 state=fallback이고 안내 문구에 회사/직무명이 들어간다", () => {
+    const result = getJobIssues({
+      companyId: "hanwha-aerospace",
+      companyName: "한화에어로스페이스",
+      roleId: "rnd-design.general",
+      roleName: "R&D/설계",
+      loadIssues: () => [],
+    });
     expect(result.state).toBe("fallback");
     expect(result.blocks).toHaveLength(0);
+    expect(result.notice).toContain("한화에어로스페이스");
+    expect(result.notice).toContain("R&D/설계");
+  });
+
+  it("회사 이슈와 직무 이슈를 구분해서 반환한다", () => {
+    const result = getJobIssues({
+      companyId: "hanwha-aerospace",
+      companyName: "한화에어로스페이스",
+      roleId: "rnd-design.general",
+      roleName: "R&D/설계",
+      loadIssues: () => [
+        { headline: "회사 전체 이슈", background: "b", work_impact: "w", interview_angle: "i", sources: [{ outlet: "A", date: "2026-01-01", url: "https://a" }] },
+        {
+          headline: "직무 관련 이슈",
+          background: "b2",
+          work_impact: "w2",
+          interview_angle: "i2",
+          applies_to_roles: ["rnd-design.general"],
+          sources: [{ outlet: "B", date: "2026-01-01", url: "https://b" }],
+        },
+      ],
+    });
+    const labels = result.blocks.map((b) => b.label);
+    expect(labels).toContain("[회사 이슈]");
+    expect(labels).toContain("[직무 이슈]");
   });
 });
 
 describe("§4.3 면접 예상 질문", () => {
-  it("역량 진단(2번) 미실행 상태에서도 정상 응답한다", async () => {
+  it("자기소개서 없이(2번 미실행) 호출해도 정상 응답한다", async () => {
     const generate = vi.fn().mockResolvedValue(
       JSON.stringify({
-        questions: [
-          { question: "이 직무에 지원한 이유는?", why: "지원 동기 검증", direction: "경험을 시간순으로 나열", followup: "그 경험에서 무엇을 배웠나요?" },
-        ],
+        jd_questions: [{ question: "이 직무에 지원한 이유는?", basis: "지원 동기 및 직무 이해 검증" }],
+        personal_questions: [],
       }),
     );
 
     const result = await generateInterviewQuestions({
       role: { name_ko: "재무", common: {} },
-      gapAnalysis: null,
-      issuesResult: null,
+      coverLetterText: null,
       generate,
     });
 
     expect(result.state).toBe("ok");
     expect(result.blocks.length).toBeGreaterThan(0);
-    expect(result.notice).toContain("먼저 역량 진단");
+    expect(result.notice).toContain("자기소개서");
   });
 
   it("모든 질문 블록에 '예상 질문' 라벨이 있다", async () => {
     const generate = vi.fn().mockResolvedValue(
       JSON.stringify({
-        questions: [
-          { question: "Q1", why: "w1", direction: "d1", followup: "f1" },
-          { question: "Q2", why: "w2", direction: "d2", followup: "f2" },
-        ],
+        jd_questions: [{ question: "Q1", basis: "b1" }],
+        personal_questions: [{ question: "Q2", basis: "b2" }],
       }),
     );
 
     const result = await generateInterviewQuestions({
       role: { name_ko: "재무", common: {} },
-      gapAnalysis: null,
-      issuesResult: null,
+      coverLetterText: "전공: 재무, 인턴 경험 있음",
       generate,
     });
 
-    expect(result.blocks.every((b) => b.label === "[예상 질문]")).toBe(true);
+    expect(result.blocks.every((b) => b.label.includes("예상 질문"))).toBe(true);
   });
 });
