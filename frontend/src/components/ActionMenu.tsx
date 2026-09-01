@@ -34,9 +34,10 @@ type Props = {
 export default function ActionMenu({ sessionId, companyId, positionId, completed, onComplete, onResult }: Props) {
   const [loadingAction, setLoadingAction] = useState<ActionKey | null>(null)
   const [profileNeededFor, setProfileNeededFor] = useState<ActionKey | null>(null)
-  const [profileText, setProfileText] = useState('')
+  const [coverLetterText, setCoverLetterText] = useState('')
+  const [portfolioText, setPortfolioText] = useState('')
 
-  const callAction = async (action: ActionKey, profileTextOverride?: string) => {
+  const callAction = async (action: ActionKey, overrides?: { coverLetterText?: string; portfolioText?: string }) => {
     setLoadingAction(action)
     try {
       const res = await fetch('/api/action', {
@@ -47,7 +48,8 @@ export default function ActionMenu({ sessionId, companyId, positionId, completed
           action,
           company_id: companyId,
           position_id: positionId,
-          profile_text: profileTextOverride,
+          cover_letter_text: overrides?.coverLetterText,
+          portfolio_text: overrides?.portfolioText,
         }),
       })
       const data: ActionResult = await res.json()
@@ -99,20 +101,29 @@ export default function ActionMenu({ sessionId, companyId, positionId, completed
       {profileNeededFor && (
         <div className="profile-panel">
           <p>
-            역량 진단을 위해 이력서 텍스트를 붙여넣거나 간단한 프로필을 적어주세요. 입력 내용은 서버에 저장되지
-            않고 이번 세션에서만 사용된 뒤 폐기됩니다.
+            역량 진단을 위해 자기소개서를 입력해주세요 (포트폴리오는 선택). 입력 내용은 서버에 저장되지 않고
+            이번 세션에서만 사용된 뒤 폐기됩니다.
           </p>
+          <label className="profile-field-label">자기소개서</label>
           <textarea
-            value={profileText}
-            onChange={(e) => setProfileText(e.target.value)}
-            placeholder={
-              '이력서를 붙여넣거나, 아래 4가지를 자유롭게 적어주세요:\n' +
-              '1) 전공 계열  2) 관심 산업  3) 보유 경험(인턴/프로젝트/자격증/어학)  4) 선호 업무 성향'
-            }
+            value={coverLetterText}
+            onChange={(e) => setCoverLetterText(e.target.value)}
+            placeholder="자기소개서 내용을 붙여넣어 주세요"
             rows={6}
           />
+          <label className="profile-field-label">포트폴리오 (선택)</label>
+          <textarea
+            value={portfolioText}
+            onChange={(e) => setPortfolioText(e.target.value)}
+            placeholder="포트폴리오 내용을 텍스트로 붙여넣어 주세요 (없으면 비워두세요)"
+            rows={4}
+          />
           <div className="profile-actions">
-            <button type="button" onClick={() => callAction(profileNeededFor, profileText)} disabled={!profileText.trim()}>
+            <button
+              type="button"
+              onClick={() => callAction(profileNeededFor, { coverLetterText, portfolioText })}
+              disabled={!coverLetterText.trim()}
+            >
               제출
             </button>
             <button
@@ -120,7 +131,8 @@ export default function ActionMenu({ sessionId, companyId, positionId, completed
               className="ghost"
               onClick={() => {
                 setProfileNeededFor(null)
-                setProfileText('')
+                setCoverLetterText('')
+                setPortfolioText('')
               }}
             >
               취소

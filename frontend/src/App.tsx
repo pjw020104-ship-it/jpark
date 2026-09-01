@@ -1,13 +1,17 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import hanwhaLogo from './assets/hanwha_logo.png'
 import ActionMenu, { type ActionKey, type ActionResult } from './components/ActionMenu'
+import ActionResultView from './components/ActionResultView'
 import { shouldShowActionMenu } from './lib/actionTrigger'
 import './App.css'
 
 type Message = {
   role: 'user' | 'assistant'
   content: string
+  kind?: 'action-result'
+  result?: ActionResult
 }
 
 type Company = { id: string; name_ko: string }
@@ -46,31 +50,6 @@ function loadOrCreateSessionId(): string {
   } catch {
     return crypto.randomUUID()
   }
-}
-
-function formatActionResult(result: ActionResult): string {
-  const parts: string[] = []
-
-  if (result.notice) parts.push(`_${result.notice}_`)
-
-  if (result.blocks.length === 0 && !result.notice) {
-    parts.push('아직 준비된 내용이 없습니다.')
-  }
-
-  for (const b of result.blocks) {
-    parts.push(`**${b.label}**\n${b.content}`)
-  }
-
-  if (result.sources && result.sources.length > 0) {
-    const lines = result.sources.map((s) => `- ${[s.outlet, s.date, s.url].filter(Boolean).join(' · ')}`)
-    parts.push(`---\n**출처**\n${lines.join('\n')}`)
-  }
-
-  if (result.as_of) {
-    parts.push(`*기준일자: ${result.as_of}*`)
-  }
-
-  return parts.filter(Boolean).join('\n\n')
 }
 
 function App() {
@@ -306,14 +285,17 @@ function App() {
         {entries.map((entry, index) => {
           const meta = resolvedMeta[index]
           const comboKey = meta ? `${meta.companyId}:${meta.positionId}` : null
-          const answerReady = Boolean(entry.answer?.content) && !(isStreaming && index === entries.length - 1)
+          const hasAnswer = entry.answer?.kind === 'action-result' || Boolean(entry.answer?.content)
+          const answerReady = hasAnswer && !(isStreaming && index === entries.length - 1)
 
           return (
             <div key={index} className="entry">
               <div className="entry-query">{entry.query.content}</div>
               <div className="entry-answer">
-                {entry.answer?.content ? (
-                  <ReactMarkdown>{entry.answer.content}</ReactMarkdown>
+                {entry.answer?.kind === 'action-result' && entry.answer.result ? (
+                  <ActionResultView result={entry.answer.result} />
+                ) : entry.answer?.content ? (
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{entry.answer.content}</ReactMarkdown>
                 ) : isStreaming && index === entries.length - 1 ? (
                   <span className="typing">답변을 정리하는 중...</span>
                 ) : null}
@@ -336,7 +318,7 @@ function App() {
                     setMessages((prev) => [
                       ...prev,
                       { role: 'user', content: label },
-                      { role: 'assistant', content: formatActionResult(result) },
+                      { role: 'assistant', content: '', kind: 'action-result', result },
                     ])
                   }}
                 />
