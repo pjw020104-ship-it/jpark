@@ -1,0 +1,163 @@
+{
+  "source": "Job_name.txt",
+  "companies": [
+    {
+      "company_id": "hanwha-investment-securities",
+      "jobs": [
+        { "id": "hanwha-investment-securities.job1", "name_ko": "IB" },
+        { "id": "hanwha-investment-securities.job2", "name_ko": "법인영업" },
+        { "id": "hanwha-investment-securities.job3", "name_ko": "Trading" },
+        { "id": "hanwha-investment-securities.job4", "name_ko": "상품" },
+        { "id": "hanwha-investment-securities.job5", "name_ko": "리스크" },
+        { "id": "hanwha-investment-securities.job6", "name_ko": "재무" },
+        { "id": "hanwha-investment-securities.job7", "name_ko": "인사" },
+        { "id": "hanwha-investment-securities.job8", "name_ko": "글로벌 투자" },
+        { "id": "hanwha-investment-securities.job9", "name_ko": "디지털 기획" }
+      ]
+    },
+    {
+      "company_id": "hanwha-engineering-construction",
+      "jobs": [
+        { "id": "hanwha-engineering-construction.job1", "name_ko": "건축" },
+        { "id": "hanwha-engineering-construction.job2", "name_ko": "토목" },
+        { "id": "hanwha-engineering-construction.job3", "name_ko": "플랜트" },
+        { "id": "hanwha-engineering-construction.job4", "name_ko": "안전환경" },
+        { "id": "hanwha-engineering-construction.job5", "name_ko": "국내영업" },
+        { "id": "hanwha-engineering-construction.job6", "name_ko": "해외영업" },
+        { "id": "hanwha-engineering-construction.job7", "name_ko": "외주/계약관리" },
+        { "id": "hanwha-engineering-construction.job8", "name_ko": "구매/자재" },
+        { "id": "hanwha-engineering-construction.job9", "name_ko": "재무" },
+        { "id": "hanwha-engineering-construction.job10", "name_ko": "기획" },
+        { "id": "hanwha-engineering-construction.job11", "name_ko": "법무" },
+        { "id": "hanwha-engineering-construction.job12", "name_ko": "인사" },
+        { "id": "hanwha-engineering-construction.job13", "name_ko": "지원" },
+        { "id": "hanwha-engineering-construction.job14", "name_ko": "홍보" }
+      ]
+    },
+    {
+      "company_id": "hanwha-aerospace",
+      "jobs": [
+        { "id": "hanwha-aerospace.job1", "name_ko": "연구개발" },
+        { "id": "hanwha-aerospace.job2", "name_ko": "제조/생산기술" },
+        { "id": "hanwha-aerospace.job3", "name_ko": "품질" },
+        { "id": "hanwha-aerospace.job4", "name_ko": "구매" },
+        { "id": "hanwha-aerospace.job5", "name_ko": "사업개발" },
+        { "id": "hanwha-aerospace.job6", "name_ko": "인사" },
+        { "id": "hanwha-aerospace.job7", "name_ko": "안전/환경" }
+      ]
+    },
+    {
+      "company_id": "hanwha-ocean",
+      "jobs": [
+        { "id": "hanwha-ocean.job1", "name_ko": "설계" },
+        { "id": "hanwha-ocean.job2", "name_ko": "영업/사업관리/구매" },
+        { "id": "hanwha-ocean.job3", "name_ko": "생산관리" },
+        { "id": "hanwha-ocean.job4", "name_ko": "AX" },
+        { "id": "hanwha-ocean.job5", "name_ko": "연구개발" },
+        { "id": "hanwha-ocean.job6", "name_ko": "경영지원" }
+      ]
+    },
+    {
+      "company_id": "hanwha-systems",
+      "jobs": [
+        { "id": "hanwha-systems.job1", "name_ko": "연구개발" },
+        { "id": "hanwha-systems.job2", "name_ko": "사업개발" },
+        { "id": "hanwha-systems.job3", "name_ko": "전략기획" },
+        { "id": "hanwha-systems.job4", "name_ko": "위성기술" },
+        { "id": "hanwha-systems.job5", "name_ko": "해외영업" },
+        { "id": "hanwha-systems.job6", "name_ko": "IPS" },
+        { "id": "hanwha-systems.job7", "name_ko": "생산기술" },
+        { "id": "hanwha-systems.job8", "name_ko": "품질" },
+        { "id": "hanwha-systems.job9", "name_ko": "상품기획" },
+        { "id": "hanwha-systems.job10", "name_ko": "관리회계" },
+        { "id": "hanwha-systems.job11", "name_ko": "구매" }
+      ]
+    },
+    {
+      "company_id": "hanwha-hotels-resorts",
+      "jobs": [
+        { "id": "hanwha-hotels-resorts.job1", "name_ko": "기획" },
+        { "id": "hanwha-hotels-resorts.job2", "name_ko": "인사" },
+        { "id": "hanwha-hotels-resorts.job3", "name_ko": "재경" },
+        { "id": "hanwha-hotels-resorts.job4", "name_ko": "CS" },
+        { "id": "hanwha-hotels-resorts.job5", "name_ko": "구매" },
+        { "id": "hanwha-hotels-resorts.job6", "name_ko": "법무" },
+        { "id": "hanwha-hotels-resorts.job7", "name_ko": "총무" },
+        { "id": "hanwha-hotels-resorts.job8", "name_ko": "홍보" },
+        { "id": "hanwha-hotels-resorts.job9", "name_ko": "환경/안전/보건 (ESH)" },
+        { "id": "hanwha-hotels-resorts.job10", "name_ko": "경영정보 (IT)" },
+        { "id": "hanwha-hotels-resorts.job11", "name_ko": "(개인)정보보호" },
+        { "id": "hanwha-hotels-resorts.job12", "name_ko": "리조트영업" },
+        { "id": "hanwha-hotels-resorts.job13", "name_ko": "호텔영업" },
+        { "id": "hanwha-hotels-resorts.job14", "name_ko": "해외영업" },
+        { "id": "hanwha-hotels-resorts.job15", "name_ko": "영업관리" },
+        { "id": "hanwha-hotels-resorts.job16", "name_ko": "디자인" },
+        { "id": "hanwha-hotels-resorts.job17", "name_ko": "리조트개발" }
+      ]
+    },
+    {
+      "company_id": "hanwha-engine",
+      "jobs": [
+        { "id": "hanwha-engine.job1", "name_ko": "관리회계/재무회계" },
+        { "id": "hanwha-engine.job2", "name_ko": "IT 기획/운영" },
+        { "id": "hanwha-engine.job3", "name_ko": "영업(IM/AM)" },
+        { "id": "hanwha-engine.job4", "name_ko": "프로젝트 엔지니어링" },
+        { "id": "hanwha-engine.job5", "name_ko": "생산기술" },
+        { "id": "hanwha-engine.job6", "name_ko": "시운전기술" },
+        { "id": "hanwha-engine.job7", "name_ko": "설계" },
+        { "id": "hanwha-engine.job8", "name_ko": "R&D" },
+        { "id": "hanwha-engine.job9", "name_ko": "품질" },
+        { "id": "hanwha-engine.job10", "name_ko": "구매" },
+        { "id": "hanwha-engine.job11", "name_ko": "안전환경" }
+      ]
+    },
+    {
+      "company_id": "hanwha-solutions",
+      "jobs": [
+        { "id": "hanwha-solutions.job1", "name_ko": "경영지원" },
+        { "id": "hanwha-solutions.job2", "name_ko": "구매/물류" },
+        { "id": "hanwha-solutions.job3", "name_ko": "기획" },
+        { "id": "hanwha-solutions.job4", "name_ko": "법무" },
+        { "id": "hanwha-solutions.job5", "name_ko": "인사" },
+        { "id": "hanwha-solutions.job6", "name_ko": "재경" },
+        { "id": "hanwha-solutions.job7", "name_ko": "총무" },
+        { "id": "hanwha-solutions.job8", "name_ko": "커뮤니케이션" },
+        { "id": "hanwha-solutions.job9", "name_ko": "정보기획" },
+        { "id": "hanwha-solutions.job10", "name_ko": "국내영업" },
+        { "id": "hanwha-solutions.job11", "name_ko": "해외영업" },
+        { "id": "hanwha-solutions.job12", "name_ko": "생산관리" },
+        { "id": "hanwha-solutions.job13", "name_ko": "생산지원(기계/장치)" },
+        { "id": "hanwha-solutions.job14", "name_ko": "생산지원(계기/전기)" },
+        { "id": "hanwha-solutions.job15", "name_ko": "안전보건환경" },
+        { "id": "hanwha-solutions.job16", "name_ko": "연구기획" },
+        { "id": "hanwha-solutions.job17", "name_ko": "공정연구" },
+        { "id": "hanwha-solutions.job18", "name_ko": "제품연구" },
+        { "id": "hanwha-solutions.job19", "name_ko": "TS&D" }
+      ]
+    },
+    {
+      "company_id": "hanwha-qcells",
+      "jobs": [
+        { "id": "hanwha-qcells.job1", "name_ko": "R&D" },
+        { "id": "hanwha-qcells.job2", "name_ko": "공정기술" },
+        { "id": "hanwha-qcells.job3", "name_ko": "장비기술 / 설비" },
+        { "id": "hanwha-qcells.job4", "name_ko": "품질관리 / 품질보증" },
+        { "id": "hanwha-qcells.job5", "name_ko": "EPC / 설계·시공" },
+        { "id": "hanwha-qcells.job6", "name_ko": "사업개발" },
+        { "id": "hanwha-qcells.job7", "name_ko": "국내영업" },
+        { "id": "hanwha-qcells.job8", "name_ko": "해외영업" },
+        { "id": "hanwha-qcells.job9", "name_ko": "에너지솔루션" },
+        { "id": "hanwha-qcells.job10", "name_ko": "구매 / SCM" },
+        { "id": "hanwha-qcells.job11", "name_ko": "경영지원" },
+        { "id": "hanwha-qcells.job12", "name_ko": "구매/물류" },
+        { "id": "hanwha-qcells.job13", "name_ko": "기획" },
+        { "id": "hanwha-qcells.job14", "name_ko": "법무" },
+        { "id": "hanwha-qcells.job15", "name_ko": "인사" },
+        { "id": "hanwha-qcells.job16", "name_ko": "재경" },
+        { "id": "hanwha-qcells.job17", "name_ko": "총무" },
+        { "id": "hanwha-qcells.job18", "name_ko": "커뮤니케이션" },
+        { "id": "hanwha-qcells.job19", "name_ko": "정보기획" }
+      ]
+    }
+  ]
+}

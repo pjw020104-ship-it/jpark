@@ -7,11 +7,9 @@
     { "id": "hanwha-systems", "name_ko": "한화시스템", "sector": null, "divisions": [] },
     { "id": "hanwha-solutions", "name_ko": "한화솔루션", "sector": null, "divisions": [] },
     { "id": "hanwha-qcells", "name_ko": "한화큐셀", "sector": null, "divisions": [] },
-    { "id": "hanwha-totalenergies", "name_ko": "한화토탈에너지스", "sector": null, "divisions": [] },
-    { "id": "hanwha-life", "name_ko": "한화생명", "sector": null, "divisions": [] },
     { "id": "hanwha-investment-securities", "name_ko": "한화투자증권", "sector": null, "divisions": [] },
     { "id": "hanwha-engineering-construction", "name_ko": "한화건설", "sector": null, "divisions": [] },
-    { "id": "hanwha-impact", "name_ko": "한화임팩트", "sector": null, "divisions": [] },
-    { "id": "hanwha-hotels-resorts", "name_ko": "한화호텔앤드리조트", "sector": null, "divisions": [] }
+    { "id": "hanwha-hotels-resorts", "name_ko": "한화호텔앤드리조트", "sector": null, "divisions": [] },
+    { "id": "hanwha-engine", "name_ko": "한화엔진", "sector": null, "divisions": [] }
   ]
 }

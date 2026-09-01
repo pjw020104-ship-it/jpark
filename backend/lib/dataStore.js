@@ -19,8 +19,8 @@ export function loadOrganizations() {
   return readJSON("organizations.json") ?? { as_of: null, source_url: null, companies: [] };
 }
 
-export function loadJobFamilies() {
-  return readJSON("job_families.json") ?? { families: [] };
+export function loadCompanyJobs() {
+  return readJSON("company_jobs.json") ?? { companies: [] };
 }
 
 export function findCompany(companyId) {
@@ -29,22 +29,20 @@ export function findCompany(companyId) {
   return org.companies.find((c) => c.id === companyId) ?? null;
 }
 
-export function findRole(roleId) {
-  if (!roleId) return null;
-  const jf = loadJobFamilies();
-  for (const family of jf.families) {
-    const role = family.roles.find((r) => r.id === roleId);
-    if (role) return { family, role };
-  }
-  return null;
+// §9: 회사별 실제 직무명은 company_jobs.json(Job_name.txt 기반)에서만 조회한다.
+export function findJobsForCompany(companyId) {
+  if (!companyId) return [];
+  const data = loadCompanyJobs();
+  const entry = data.companies.find((c) => c.company_id === companyId);
+  return entry ? entry.jobs : [];
 }
 
-export function findRoleByName(nameKo) {
-  if (!nameKo) return null;
-  const jf = loadJobFamilies();
-  for (const family of jf.families) {
-    const role = family.roles.find((r) => r.name_ko === nameKo);
-    if (role) return { family, role };
+export function findJob(jobId) {
+  if (!jobId) return null;
+  const data = loadCompanyJobs();
+  for (const company of data.companies) {
+    const job = company.jobs.find((j) => j.id === jobId);
+    if (job) return { role: { id: job.id, name_ko: job.name_ko, common: {} } };
   }
   return null;
 }

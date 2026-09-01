@@ -2,7 +2,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { GoogleGenAI } from "@google/genai";
-import { loadOrganizations, loadJobFamilies, findCompany, findRole } from "./lib/dataStore.js";
+import { loadOrganizations, findJobsForCompany, findCompany, findJob } from "./lib/dataStore.js";
 import { getSession, setActiveContext } from "./session/store.js";
 import { generateScenario } from "./features/scenario.js";
 import { analyzeGap } from "./features/gapAnalysis.js";
@@ -99,15 +99,12 @@ app.get("/api/organizations", (_req, res) => {
   res.json({ as_of: org.as_of, companies: org.companies.map((c) => ({ id: c.id, name_ko: c.name_ko })) });
 });
 
-app.get("/api/job-families", (_req, res) => {
-  const jf = loadJobFamilies();
-  res.json({
-    families: jf.families.map((f) => ({
-      id: f.id,
-      name_ko: f.name_ko,
-      roles: f.roles.map((r) => ({ id: r.id, name_ko: r.name_ko })),
-    })),
-  });
+app.get("/api/jobs", (req, res) => {
+  const { company_id } = req.query;
+  if (!company_id) {
+    return res.status(400).json({ error: "company_id가 필요합니다." });
+  }
+  res.json({ jobs: findJobsForCompany(company_id) });
 });
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -129,7 +126,7 @@ app.post("/api/action", async (req, res) => {
   }
 
   const company = findCompany(companyId);
-  const found = findRole(positionId);
+  const found = findJob(positionId);
 
   if (!company || !found) {
     return res.status(400).json({ error: "알 수 없는 company_id 또는 position_id 입니다." });

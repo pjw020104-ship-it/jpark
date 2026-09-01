@@ -513,6 +513,7 @@
 ## 9. 유지보수 규칙
 
 - 부문 명칭을 코드나 프롬프트에 **하드코딩 금지**. 반드시 `organizations.json` 참조.
+- 계열사별 실제 직무명도 **하드코딩 금지**. `data/company_jobs.json`(출처: `Job_name.txt`)에서 조회하며, 이 파일에 없는 계열사는 `organizations.json`에서도 제외한다. 직무명을 갱신할 때는 `Job_name.txt` → `company_jobs.json` 순으로 반영한다.
 - `last_reviewed`가 180일 초과한 `position` 파일은 답변 시 "정보 갱신 필요" 내부 플래그 부착.
 - 채용 공고는 매 시즌 변경된다. 갱신 주기와 콘텐츠 오너를 사전에 확정하지 않으면 2년 전 정보가 남아 오히려 신뢰를 깎는다.
 
