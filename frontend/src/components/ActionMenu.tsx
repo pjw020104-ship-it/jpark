@@ -77,6 +77,16 @@ export default function ActionMenu({ sessionId, companyId, positionId, completed
     }
   }
 
+  // 나의 역량 진단하기는 API를 먼저 부르지 않고 항상 입력 패널을 바로 띄운다.
+  // 세션에 남아있는 이전 입력으로 조용히 대답하지 않고, 매번 직접 입력을 받는다.
+  const handleButtonClick = (action: ActionKey) => {
+    if (action === 'skill_gap') {
+      setProfileNeededFor('skill_gap')
+      return
+    }
+    callAction(action)
+  }
+
   return (
     <div className="action-menu">
       <div className="action-menu-grid">
@@ -85,7 +95,7 @@ export default function ActionMenu({ sessionId, companyId, positionId, completed
             key={key}
             type="button"
             className="action-btn"
-            onClick={() => callAction(key)}
+            onClick={() => handleButtonClick(key)}
             disabled={loadingAction === key}
           >
             {loadingAction === key ? (

@@ -144,12 +144,14 @@ app.post("/api/action", async (req, res) => {
         break;
 
       case "skill_gap": {
-        const coverLetterText = cover_letter_text ?? session.coverLetterSummary;
-        const portfolioText = portfolio_text ?? session.portfolioSummary;
-        if (cover_letter_text) session.coverLetterSummary = cover_letter_text;
-        if (portfolio_text) session.portfolioSummary = portfolio_text;
-        result = await analyzeGap({ role: found.role, coverLetterText, portfolioText });
-        if (result.state === "ok") session.lastGapAnalysis = result;
+        // 이 요청에 직접 실린 텍스트만 사용한다. 세션에 남아있는 이전 값으로
+        // 조용히 대체하지 않는다 - 사용자가 입력하지 않은 자료로 답하는 것을 방지한다.
+        result = await analyzeGap({ role: found.role, coverLetterText: cover_letter_text, portfolioText: portfolio_text });
+        if (result.state === "ok") {
+          session.coverLetterSummary = cover_letter_text;
+          session.portfolioSummary = portfolio_text;
+          session.lastGapAnalysis = result;
+        }
         break;
       }
 
