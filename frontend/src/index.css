@@ -30,7 +30,7 @@ body {
   margin: 0;
   color: var(--text);
   background:
-    linear-gradient(180deg, rgba(6, 8, 14, 0.72), rgba(6, 8, 14, 0.86)),
+    linear-gradient(180deg, rgba(6, 8, 14, 0.4), rgba(6, 8, 14, 0.55)),
     url('/background.jpg') center / cover no-repeat fixed;
   background-color: var(--bg);
 }
