@@ -1,0 +1,14 @@
+{
+  "name": "hanwha-job-guide-cloudflare",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "sync-data": "node scripts/sync-data.mjs",
+    "dev": "npm run sync-data && wrangler pages dev dist",
+    "deploy": "npm run sync-data && wrangler pages deploy dist"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

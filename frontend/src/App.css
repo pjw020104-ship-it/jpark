@@ -5,7 +5,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #0a0d16;
+  background: #ffffff;
   opacity: 1;
   transition: opacity 0.7s ease;
 }
@@ -140,11 +140,6 @@
   color: var(--text);
   font: inherit;
   font-size: 0.86rem;
-}
-
-.job-form .company-input {
-  flex: 1;
-  min-width: 0;
 }
 
 .job-form-row input {

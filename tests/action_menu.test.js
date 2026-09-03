@@ -3,20 +3,16 @@ import { generateScenario } from "../backend/features/scenario.js";
 import { analyzeGap } from "../backend/features/gapAnalysis.js";
 import { getJobIssues } from "../backend/features/issues.js";
 import { generateInterviewQuestions } from "../backend/features/interview.js";
-import { filterActiveIssues } from "../backend/lib/dataStore.js";
 import { redact } from "../backend/profile/redact.js";
 import { containsForbiddenPattern } from "../backend/features/guard.js";
 import { shouldShowActionMenu } from "../frontend/src/lib/actionTrigger.ts";
+import { callWithRetry, describeLlmError } from "../backend/lib/llm.js";
 
-const EMPTY_ROLE = {
-  id: "test.role",
-  name_ko: "테스트 직무",
-  common: {
-    scenario_seeds: [],
-    interview_themes: [],
-    what_you_do: [],
-  },
-};
+function apiError(status) {
+  const err = new Error(`status ${status}`);
+  err.status = status;
+  return err;
+}
 
 describe("§4.5 버튼 노출 트리거", () => {
   it("company_id 또는 position_id 누락 시 버튼이 노출되지 않는다", () => {
@@ -31,13 +27,26 @@ describe("§4.5 버튼 노출 트리거", () => {
 });
 
 describe("§4.1 직무 설명 (scenario)", () => {
-  it("scenario_seeds가 없는 직무에서 호출 시 state=fallback이고 생성된 시나리오 텍스트가 없다", async () => {
-    const generate = vi.fn();
-    const result = await generateScenario({ role: EMPTY_ROLE, generate });
+  it("검색 그라운딩 결과로 시나리오와 출처를 생성한다", async () => {
+    const generate = vi.fn().mockResolvedValue({
+      text: "### 업무 Flow\n| 단계 | 내용 |\n|---|---|\n| 1 | 자금 계획 수립 |",
+      sources: [{ outlet: "한화 채용 홈페이지", url: "https://example.com/jd" }],
+    });
+
+    const result = await generateScenario({ role: { name_ko: "재무" }, companyName: "한화솔루션", generate });
+
+    expect(result.state).toBe("ok");
+    expect(result.blocks).toHaveLength(1);
+    expect(result.sources).toEqual([{ outlet: "한화 채용 홈페이지", url: "https://example.com/jd" }]);
+    expect(generate).toHaveBeenCalledWith(expect.objectContaining({ prompt: expect.stringContaining("한화솔루션") }));
+  });
+
+  it("검색 결과 텍스트가 비어 있으면 state=fallback이다", async () => {
+    const generate = vi.fn().mockResolvedValue({ text: "", sources: [] });
+    const result = await generateScenario({ role: { name_ko: "재무" }, generate });
 
     expect(result.state).toBe("fallback");
     expect(result.blocks).toHaveLength(0);
-    expect(generate).not.toHaveBeenCalled();
   });
 });
 
@@ -107,60 +116,50 @@ describe("redact()", () => {
   });
 });
 
-describe("§4.4 직무 이슈 분석", () => {
-  it("expires_at이 지난 이슈는 제외된다", () => {
-    const issues = [
-      { id: "old", sources: [{ outlet: "A", date: "2024-01-01", url: "https://a" }], expires_at: "2024-01-01" },
-      { id: "current", sources: [{ outlet: "B", date: "2026-01-01", url: "https://b" }], expires_at: "2099-01-01" },
-    ];
-    const active = filterActiveIssues(issues, new Date("2026-09-01"));
-    expect(active.map((i) => i.id)).toEqual(["current"]);
-  });
+describe("§4.4 직무 이슈 분석 (검색 그라운딩 없음)", () => {
+  it("insufficient 플래그가 true면 fallback이고 회사/직무명이 안내에 포함된다", async () => {
+    const generate = vi.fn().mockResolvedValue(
+      JSON.stringify({ insufficient: true, company_issues: [], job_issues: [] }),
+    );
 
-  it("sources가 빈 이슈는 제외된다", () => {
-    const issues = [
-      { id: "no-source", sources: [] },
-      { id: "has-source", sources: [{ outlet: "B", date: "2026-01-01", url: "https://b" }] },
-    ];
-    const active = filterActiveIssues(issues, new Date("2026-09-01"));
-    expect(active.map((i) => i.id)).toEqual(["has-source"]);
-  });
+    const result = await getJobIssues({ companyName: "한화에어로스페이스", roleName: "R&D/설계", generate });
 
-  it("이슈 데이터가 없으면 state=fallback이고 안내 문구에 회사/직무명이 들어간다", () => {
-    const result = getJobIssues({
-      companyId: "hanwha-aerospace",
-      companyName: "한화에어로스페이스",
-      roleId: "rnd-design.general",
-      roleName: "R&D/설계",
-      loadIssues: () => [],
-    });
     expect(result.state).toBe("fallback");
     expect(result.blocks).toHaveLength(0);
     expect(result.notice).toContain("한화에어로스페이스");
     expect(result.notice).toContain("R&D/설계");
   });
 
-  it("회사 이슈와 직무 이슈를 구분해서 반환한다", () => {
-    const result = getJobIssues({
-      companyId: "hanwha-aerospace",
-      companyName: "한화에어로스페이스",
-      roleId: "rnd-design.general",
-      roleName: "R&D/설계",
-      loadIssues: () => [
-        { headline: "회사 전체 이슈", background: "b", work_impact: "w", interview_angle: "i", sources: [{ outlet: "A", date: "2026-01-01", url: "https://a" }] },
-        {
-          headline: "직무 관련 이슈",
-          background: "b2",
-          work_impact: "w2",
-          interview_angle: "i2",
-          applies_to_roles: ["rnd-design.general"],
-          sources: [{ outlet: "B", date: "2026-01-01", url: "https://b" }],
-        },
-      ],
-    });
+  it("headline/background/work_impact 중 하나라도 비어 있으면 그 이슈는 제외된다", async () => {
+    const generate = vi.fn().mockResolvedValue(
+      JSON.stringify({
+        insufficient: false,
+        company_issues: [{ headline: "", background: "b", work_impact: "w", interview_angle: "i" }],
+        job_issues: [],
+      }),
+    );
+
+    const result = await getJobIssues({ companyName: "한화에어로스페이스", roleName: "R&D/설계", generate });
+    expect(result.state).toBe("fallback");
+  });
+
+  it("완전한 이슈가 있으면 회사/직무로 구분해서 반환하고, 검색 그라운딩이 없다는 안내를 포함한다", async () => {
+    const generate = vi.fn().mockResolvedValue(
+      JSON.stringify({
+        insufficient: false,
+        company_issues: [{ headline: "회사 전체 이슈", background: "b", work_impact: "w", interview_angle: "i" }],
+        job_issues: [{ headline: "직무 관련 이슈", background: "b2", work_impact: "w2", interview_angle: "i2" }],
+      }),
+    );
+
+    const result = await getJobIssues({ companyName: "한화에어로스페이스", roleName: "R&D/설계", generate });
+
     const labels = result.blocks.map((b) => b.label);
     expect(labels).toContain("[회사 이슈]");
     expect(labels).toContain("[직무 이슈]");
+    expect(labels).toContain("[안내]");
+    expect(labels).not.toContain("[이슈]"); // 헤드라인은 [회사 이슈]/[직무 이슈] 라벨에 합쳐져야 하고 별도 [이슈] 라벨이 중복되면 안 된다
+    expect(result.sources).toHaveLength(0);
   });
 });
 
@@ -199,5 +198,41 @@ describe("§4.3 면접 예상 질문", () => {
     });
 
     expect(result.blocks.every((b) => b.label.includes("예상 질문"))).toBe(true);
+  });
+});
+
+describe("Gemini 호출 재시도 및 오류 안내 (llm.js)", () => {
+  it("503처럼 일시적인 오류는 재시도 후 성공하면 값을 반환한다", async () => {
+    const fn = vi
+      .fn()
+      .mockRejectedValueOnce(apiError(503))
+      .mockResolvedValueOnce("ok");
+
+    const result = await callWithRetry(fn, [0, 0]);
+
+    expect(result).toBe("ok");
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
+  it("재시도를 모두 소진하면 userReason이 붙은 원본 에러를 던진다", async () => {
+    const fn = vi.fn().mockRejectedValue(apiError(429));
+
+    await expect(callWithRetry(fn, [0, 0])).rejects.toMatchObject({ status: 429, userReason: 429 });
+    expect(fn).toHaveBeenCalledTimes(3);
+  });
+
+  it("재시도 대상이 아닌 오류(예: 400)는 즉시 던지고 재시도하지 않는다", async () => {
+    const fn = vi.fn().mockRejectedValue(apiError(400));
+
+    await expect(callWithRetry(fn, [0, 0])).rejects.toMatchObject({ status: 400, userReason: "unknown" });
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it("일시적 오류(재시도 대상 상태코드)와 그 외 오류에 서로 다른 안내 문구를 반환한다", () => {
+    const transient = describeLlmError({ userReason: 503 });
+    const unknown = describeLlmError({ userReason: "unknown" });
+
+    expect(transient).not.toBe(unknown);
+    expect(transient).toContain("일시적");
   });
 });

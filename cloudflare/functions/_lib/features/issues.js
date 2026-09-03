@@ -1,7 +1,7 @@
-import { generateText } from "../lib/llm.js";
-import * as metrics from "../lib/metrics.js";
+import { generateText } from "../llm.js";
+import * as metrics from "../metrics.js";
 
-// 로컬 모델은 실시간 웹 검색을 하지 못하므로, 특정 날짜의 뉴스를 지어내지 말고
+// 실시간 검색 그라운딩이 없으므로, 특정 날짜의 뉴스를 지어내지 말고
 // "일반적으로 알려진 산업 동향" 수준으로만 답하게 한다. 출처/URL은 검증할 방법이 없으므로 요구하지 않는다.
 const SYSTEM = `당신은 한화그룹 지원자에게 회사·직무 관련 산업 동향을 설명하는 도우미입니다.
 당신은 실시간 뉴스를 검색할 수 없습니다. 특정 날짜의 기사, 구체적인 보도 내용, URL을 지어내지 마세요.
@@ -42,9 +42,9 @@ function issueToBlocks(issue, categoryLabel) {
   ];
 }
 
-export async function getJobIssues({ companyName, roleName, generate = generateText }) {
+export async function getJobIssues({ companyName, roleName, apiKey, generate = generateText }) {
   const prompt = `회사: ${companyName}\n직무: ${roleName}\n위 회사와 직무에 대한 일반적인 산업 동향을 정리해줘.`;
-  const raw = await generate({ system: SYSTEM, prompt });
+  const raw = await generate({ system: SYSTEM, prompt, apiKey });
   const parsed = parseJsonLoose(raw);
 
   const isComplete = (issue) => Boolean(issue?.headline && issue?.background && issue?.work_impact);

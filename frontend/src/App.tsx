@@ -18,8 +18,6 @@ type Message = {
 type Company = { id: string; name_ko: string }
 type Job = { id: string; name_ko: string }
 
-const CUSTOM_COMPANY_VALUE = '__custom__'
-
 const STORAGE_KEY = 'hanwha-explainer-messages'
 const SESSION_KEY = 'hanwha-explainer-session-id'
 
@@ -60,7 +58,6 @@ function App() {
   const [jobs, setJobs] = useState<Job[]>([])
 
   const [companyId, setCompanyId] = useState<string>('')
-  const [customCompany, setCustomCompany] = useState('')
   const [jobTitle, setJobTitle] = useState('')
   const [followUp, setFollowUp] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
@@ -84,7 +81,7 @@ function App() {
 
   // 회사별 실제 직무명(Job_name.txt 기반)을 회사가 바뀔 때마다 다시 받아온다.
   useEffect(() => {
-    if (!companyId || companyId === CUSTOM_COMPANY_VALUE) {
+    if (!companyId) {
       setJobs([])
       return
     }
@@ -177,7 +174,7 @@ function App() {
   }
 
   const selectedCompany = companies.find((c) => c.id === companyId)
-  const resolvedCompanyName = companyId === CUSTOM_COMPANY_VALUE ? customCompany.trim() : (selectedCompany?.name_ko ?? '')
+  const resolvedCompanyName = selectedCompany?.name_ko ?? ''
 
   const entries: { query: Message; answer?: Message }[] = []
   for (let i = 1; i < messages.length; i += 2) {
@@ -192,7 +189,7 @@ function App() {
     // §4.5 트리거: company_id + position_id가 모두 정확히 확정될 때만 버튼 메뉴를 연결한다.
     const matchedRole = jobs.find((r) => r.name_ko === job)
     const nextEntryIndex = entries.length
-    if (shouldShowActionMenu(companyId, matchedRole?.id) && companyId !== CUSTOM_COMPANY_VALUE) {
+    if (shouldShowActionMenu(companyId, matchedRole?.id)) {
       setResolvedMeta((prev) => ({ ...prev, [nextEntryIndex]: { companyId, positionId: matchedRole!.id } }))
     }
 
@@ -251,16 +248,7 @@ function App() {
                 {c.name_ko}
               </option>
             ))}
-            <option value={CUSTOM_COMPANY_VALUE}>기타(직접 입력)</option>
           </select>
-          {companyId === CUSTOM_COMPANY_VALUE && (
-            <input
-              className="company-input"
-              value={customCompany}
-              onChange={(e) => setCustomCompany(e.target.value)}
-              placeholder="회사명 입력"
-            />
-          )}
         </div>
         <div className="job-form-row">
           <input

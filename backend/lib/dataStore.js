@@ -51,19 +51,3 @@ export function loadPosition(companyId, divisionId, roleId) {
   const p = `positions/${companyId}.${divisionId}.${roleId}.json`;
   return readJSON(p);
 }
-
-export function filterActiveIssues(issues, now = new Date()) {
-  return issues.filter((issue) => {
-    if (!issue.sources || issue.sources.length === 0) return false;
-    if (issue.expires_at && new Date(issue.expires_at) < now) return false;
-    return true;
-  });
-}
-
-export function loadIssuesForCompany(companyId) {
-  if (!companyId) return [];
-  const data = readJSON(`issues/${companyId}.json`);
-  if (!data) return [];
-  const list = Array.isArray(data) ? data : (data.issues ?? []);
-  return filterActiveIssues(list);
-}

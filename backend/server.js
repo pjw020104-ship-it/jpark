@@ -1,20 +1,17 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import { GoogleGenAI } from "@google/genai";
 import { loadOrganizations, findJobsForCompany, findCompany, findJob } from "./lib/dataStore.js";
 import { getSession, setActiveContext } from "./session/store.js";
 import { generateScenario } from "./features/scenario.js";
 import { analyzeGap } from "./features/gapAnalysis.js";
 import { getJobIssues } from "./features/issues.js";
 import { generateInterviewQuestions } from "./features/interview.js";
+import { generateTextStream, describeLlmError } from "./lib/llm.js";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-const MODEL = "gemini-3.6-flash";
 
 const SYSTEM_PROMPT = `당신은 "한화 직무 가이드"라는 AI 어시스턴트입니다.
 한화그룹에 지원하려는 취준생이 "회사 + 직무명"을 입력하면, 그 직무를 쉽고 명확하게 파악할 수 있도록 도와주는 역할을 합니다.
@@ -72,11 +69,7 @@ app.post("/api/chat", async (req, res) => {
       parts: [{ text: m.content }],
     }));
 
-    const stream = await ai.models.generateContentStream({
-      model: MODEL,
-      contents,
-      config: { systemInstruction: SYSTEM_PROMPT },
-    });
+    const stream = await generateTextStream({ system: SYSTEM_PROMPT, contents });
 
     for await (const chunk of stream) {
       if (chunk.text) {
@@ -88,7 +81,7 @@ app.post("/api/chat", async (req, res) => {
     res.end();
   } catch (error) {
     console.error(error);
-    res.write(`data: ${JSON.stringify({ error: "답변 생성 중 오류가 발생했습니다." })}\n\n`);
+    res.write(`data: ${JSON.stringify({ error: describeLlmError(error) })}\n\n`);
     res.end();
   }
 });
@@ -137,7 +130,7 @@ app.post("/api/action", async (req, res) => {
 
     switch (action) {
       case "job_description":
-        result = await generateScenario({ role: found.role });
+        result = await generateScenario({ role: found.role, companyName: company.name_ko });
         break;
 
       case "skill_gap": {
@@ -153,10 +146,8 @@ app.post("/api/action", async (req, res) => {
       }
 
       case "job_issues":
-        result = getJobIssues({
-          companyId: company.id,
+        result = await getJobIssues({
           companyName: company.name_ko,
-          roleId: found.role.id,
           roleName: found.role.name_ko,
         });
         if (result.state === "ok") session.lastIssues = result;
@@ -184,7 +175,7 @@ app.post("/api/action", async (req, res) => {
       sources: [],
       as_of: today(),
       state: "fallback",
-      notice: "답변 생성 중 오류가 발생했습니다.",
+      notice: describeLlmError(error),
     });
   }
 });
