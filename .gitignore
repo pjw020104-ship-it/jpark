@@ -4,3 +4,6 @@ dist
 .dev.vars
 .wrangler
 cloudflare/functions/_lib/data
+
+# 프로토타입 폰트는 자동 생성물 (node prototypes/build-fonts.mjs)
+prototypes/hanwha-fonts.css

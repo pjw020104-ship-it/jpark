@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>한화 인트로 슬라이드쇼 · 프로토타입</title>
+<link rel="stylesheet" href="hanwha-fonts.css" />
+<style>
+  :root {
+    --ink: #12151c;
+    --ink-soft: #5c6472;
+    --hanwha: #ff6a00;
+    --fade: 700ms;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    height: 100%;
+    font: 400 15px/1.55 'Hanwha', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: var(--ink);
+    background: #0a0d16;
+  }
+
+  /* ───────────────────────── 인트로 오버레이 ───────────────────────── */
+
+  .intro {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    overflow: hidden;
+    background: #fff;
+    opacity: 1;
+    transition: opacity var(--fade) ease;
+  }
+  .intro.is-done { opacity: 0; pointer-events: none; }
+  .intro[hidden] { display: none; }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 7vh 6vw;
+    opacity: 0;
+    visibility: hidden;
+    background: var(--slide-bg, #fff);
+    transition: opacity var(--fade) ease, visibility 0s linear var(--fade);
+  }
+  .slide.is-active {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity var(--fade) ease, visibility 0s;
+  }
+
+  /* 업종별 색 — 슬라이드마다 옅은 톤만 바꾸고, 한화 오렌지는 진행바/로고에 공통으로 남긴다 */
+  .slide[data-key="defense"] { --accent: #2f5f8f; --slide-bg: radial-gradient(120% 100% at 78% 22%, #eaf1f8 0%, #fbfcfe 55%, #fff 100%); }
+  .slide[data-key="energy"]  { --accent: #1f8a6d; --slide-bg: radial-gradient(120% 100% at 78% 22%, #e8f5f0 0%, #fafdfb 55%, #fff 100%); }
+  .slide[data-key="finance"] { --accent: #34489b; --slide-bg: radial-gradient(120% 100% at 78% 22%, #eceffa 0%, #fbfbfe 55%, #fff 100%); }
+  .slide[data-key="hotel"]   { --accent: #b0703b; --slide-bg: radial-gradient(120% 100% at 78% 22%, #f9f0e7 0%, #fdfaf7 55%, #fff 100%); }
+  .slide[data-key="outro"]   { --accent: var(--hanwha); --slide-bg: #fff; }
+
+  .slide-inner {
+    width: min(980px, 100%);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4vw;
+  }
+
+  .copy { max-width: 34ch; }
+
+  .eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.26em;
+    color: var(--accent);
+  }
+  .eyebrow::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: currentColor;
+    opacity: 0.35;
+  }
+
+  .title {
+    margin: 18px 0 10px;
+    font-size: clamp(52px, 10vw, 104px);
+    font-weight: 700;
+    letter-spacing: -0.035em;
+    line-height: 1;
+  }
+
+  .title-en {
+    font-size: clamp(11px, 1.6vw, 13px);
+    font-weight: 400;
+    letter-spacing: 0.22em;
+    color: var(--ink-soft);
+  }
+
+  .desc {
+    margin: 22px 0 0;
+    font-size: clamp(15px, 2.1vw, 19px);
+    font-weight: 300;
+    line-height: 1.6;
+    color: var(--ink-soft);
+  }
+
+  .motif {
+    flex: 0 0 auto;
+    width: clamp(180px, 30vw, 340px);
+    color: var(--accent);
+    opacity: 0;
+    transform: scale(0.94);
+    transition: opacity 1s ease 0.1s, transform 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) 0.1s;
+  }
+  .motif svg { display: block; width: 100%; height: auto; }
+  .is-active .motif { opacity: 0.92; transform: none; }
+
+  /* 등장 모션 — .is-active가 붙는 순간 자식들이 --d 만큼 시차를 두고 올라온다 */
+  .fx {
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.7s ease var(--d, 0s), transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) var(--d, 0s);
+  }
+  .is-active .fx { opacity: 1; transform: none; }
+
+  /* ───────────────────────── 아웃트로 ───────────────────────── */
+
+  .outro-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 16px;
+  }
+  .outro-logo {
+    width: clamp(150px, 26vw, 210px);
+    height: auto;
+  }
+  .outro-line {
+    font-size: clamp(16px, 2.4vw, 21px);
+    font-weight: 300;
+    color: var(--ink-soft);
+  }
+  .outro-line b { font-weight: 700; color: var(--ink); letter-spacing: -0.02em; }
+
+  /* ───────────────────────── 진행바 / 스킵 ───────────────────────── */
+
+  .progress {
+    position: absolute;
+    left: 50%;
+    bottom: 5vh;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    width: min(340px, 62vw);
+    transition: opacity 0.5s ease;
+  }
+  .progress.is-hidden { opacity: 0; }
+
+  .seg {
+    flex: 1;
+    height: 3px;
+    border-radius: 999px;
+    background: rgba(18, 21, 28, 0.12);
+    overflow: hidden;
+  }
+  .seg-fill {
+    display: block;
+    height: 100%;
+    background: var(--hanwha);
+    transform: scaleX(0);
+    transform-origin: left center;
+  }
+
+  .skip {
+    position: absolute;
+    right: 5vw;
+    top: 5vh;
+    padding: 8px 14px;
+    border: 1px solid rgba(18, 21, 28, 0.14);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.7);
+    font: inherit;
+    font-size: 13px;
+    color: var(--ink-soft);
+    cursor: pointer;
+    transition: border-color 0.2s ease, color 0.2s ease;
+  }
+  .skip:hover { border-color: var(--hanwha); color: var(--hanwha); }
+
+  /* ───────────────────────── 인트로 뒤에 드러나는 앱 자리 ───────────────────────── */
+
+  .app-stub {
+    min-height: 100svh;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    color: #eef1f6;
+    background: linear-gradient(180deg, #0a0d16, #141a2c);
+  }
+  .app-card {
+    width: min(560px, 100%);
+    padding: 32px;
+    border: 1px solid #242b45;
+    border-radius: 14px;
+    background: #131829;
+    text-align: center;
+  }
+  .app-card h2 { margin: 0 0 8px; font-size: 20px; font-weight: 700; }
+  .app-card p { margin: 0; font-size: 14px; font-weight: 300; color: #8b93a8; }
+
+  /* ───────────────────────── 프로토타입 전용 조작 바 ───────────────────────── */
+
+  .devbar {
+    position: fixed;
+    left: 16px;
+    bottom: 16px;
+    z-index: 1200;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid #2b3350;
+    border-radius: 10px;
+    background: rgba(10, 13, 22, 0.86);
+    color: #8b93a8;
+    font-size: 12px;
+  }
+  .devbar b { color: #ff9d55; font-weight: 700; letter-spacing: 0.06em; }
+  .devbar button, .devbar select {
+    padding: 5px 10px;
+    border: 1px solid #2b3350;
+    border-radius: 7px;
+    background: #0f1424;
+    color: #eef1f6;
+    font: inherit;
+    cursor: pointer;
+  }
+  .devbar button:hover { border-color: var(--hanwha); }
+
+  @media (max-width: 720px) {
+    .slide-inner { flex-direction: column-reverse; align-items: flex-start; gap: 28px; }
+    .copy { max-width: none; }
+    .motif { width: 44vw; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .fx, .motif { transition-duration: 0.01ms; transform: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="intro" id="intro">
+
+  <section class="slide" data-key="defense">
+    <div class="slide-inner">
+      <div class="copy">
+        <div class="eyebrow fx" style="--d: 0.05s">01 DEFENSE</div>
+        <h1 class="title fx" style="--d: 0.12s">방산</h1>
+        <div class="title-en fx" style="--d: 0.2s">DEFENSE &amp; AEROSPACE</div>
+        <p class="desc fx" style="--d: 0.28s">지상과 바다, 하늘과 우주까지.<br />국가의 안보를 떠받치는 기술을 만듭니다.</p>
+      </div>
+      <div class="motif">
+        <svg viewBox="0 0 400 400" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+          <circle cx="196" cy="230" r="58" opacity="0.4" />
+          <circle cx="196" cy="230" r="108" opacity="0.26" />
+          <circle cx="196" cy="230" r="158" opacity="0.14" />
+          <path d="M196 230 L330 158" stroke-width="2" opacity="0.7" />
+          <path d="M30 356 C 130 336, 252 262, 322 96" stroke-dasharray="5 9" opacity="0.65" />
+          <path d="M311 118 L332 88 L344 122 Z" fill="currentColor" stroke="none" opacity="0.9" />
+          <path d="M196 60 v18 M196 382 v-18 M26 230 h18 M366 230 h-18" opacity="0.45" />
+          <circle cx="196" cy="230" r="4" fill="currentColor" stroke="none" />
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" data-key="energy">
+    <div class="slide-inner">
+      <div class="copy">
+        <div class="eyebrow fx" style="--d: 0.05s">02 ENERGY</div>
+        <h1 class="title fx" style="--d: 0.12s">에너지</h1>
+        <div class="title-en fx" style="--d: 0.2s">SOLAR &amp; CLEAN ENERGY</div>
+        <p class="desc fx" style="--d: 0.28s">태양광에서 풍력, 수소까지.<br />다음 세대가 쓸 에너지를 앞당깁니다.</p>
+      </div>
+      <div class="motif">
+        <svg viewBox="0 0 400 400" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+          <circle cx="150" cy="132" r="50" opacity="0.75" />
+          <g opacity="0.5">
+            <path d="M150 52 v-22 M150 234 v-22 M70 132 h-22 M252 132 h-22" />
+            <path d="M93 75 l-16 -16 M223 205 l-16 -16 M93 189 l-16 16 M223 59 l-16 16" />
+          </g>
+          <path d="M318 350 V214" stroke-width="2" opacity="0.7" />
+          <g opacity="0.75">
+            <path d="M318 214 L318 128" />
+            <path d="M318 214 L392 256" />
+            <path d="M318 214 L244 256" />
+          </g>
+          <circle cx="318" cy="214" r="5" fill="currentColor" stroke="none" />
+          <path d="M28 306 q34 -26 68 0 t68 0 t68 0" opacity="0.4" />
+          <path d="M28 340 q34 -26 68 0 t68 0 t68 0" opacity="0.24" />
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" data-key="finance">
+    <div class="slide-inner">
+      <div class="copy">
+        <div class="eyebrow fx" style="--d: 0.05s">03 FINANCE</div>
+        <h1 class="title fx" style="--d: 0.12s">금융</h1>
+        <div class="title-en fx" style="--d: 0.2s">INSURANCE &amp; INVESTMENT</div>
+        <p class="desc fx" style="--d: 0.28s">보험과 증권, 자산운용으로<br />한 사람의 생애 설계를 함께 그립니다.</p>
+      </div>
+      <div class="motif">
+        <svg viewBox="0 0 400 400" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <g fill="currentColor" stroke="none" opacity="0.12">
+            <rect x="52" y="252" width="46" height="86" rx="4" />
+            <rect x="128" y="214" width="46" height="124" rx="4" />
+            <rect x="204" y="238" width="46" height="100" rx="4" />
+            <rect x="280" y="150" width="46" height="188" rx="4" />
+          </g>
+          <path d="M40 338 H372" opacity="0.35" />
+          <path d="M56 288 L150 208 L226 250 L344 104" stroke-width="2.2" />
+          <path d="M300 100 H352 V152" opacity="0.55" />
+          <g fill="#fff" stroke="currentColor" stroke-width="2">
+            <circle cx="56" cy="288" r="6" />
+            <circle cx="150" cy="208" r="6" />
+            <circle cx="226" cy="250" r="6" />
+            <circle cx="344" cy="104" r="6" />
+          </g>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" data-key="hotel">
+    <div class="slide-inner">
+      <div class="copy">
+        <div class="eyebrow fx" style="--d: 0.05s">04 HOSPITALITY</div>
+        <h1 class="title fx" style="--d: 0.12s">호텔</h1>
+        <div class="title-en fx" style="--d: 0.2s">HOTEL &amp; RESORT</div>
+        <p class="desc fx" style="--d: 0.28s">머무는 시간을 경험으로.<br />일상에서 가장 먼 하루를 설계합니다.</p>
+      </div>
+      <div class="motif">
+        <svg viewBox="0 0 400 400" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+          <circle cx="306" cy="96" r="30" opacity="0.4" />
+          <path d="M60 300 V186 a44 44 0 0 1 88 0 V300" opacity="0.8" />
+          <path d="M156 300 V162 a44 44 0 0 1 88 0 V300" opacity="0.8" />
+          <path d="M252 300 V186 a44 44 0 0 1 88 0 V300" opacity="0.8" />
+          <path d="M40 300 H360" stroke-width="2" opacity="0.7" />
+          <path d="M104 300 V214 M200 300 V190 M296 300 V214" opacity="0.28" />
+          <path d="M34 334 q34 -24 68 0 t68 0 t68 0 t68 0" opacity="0.42" />
+          <path d="M34 364 q34 -24 68 0 t68 0 t68 0 t68 0" opacity="0.22" />
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" data-key="outro">
+    <div class="outro-inner">
+      <img class="outro-logo motif" src="hanwha_logo.png" alt="한화" />
+      <div class="outro-line fx" style="--d: 0.18s"><b>직무 가이드</b></div>
+      <div class="outro-line fx" style="--d: 0.28s">지원하려는 직무, 제대로 알고 시작하세요.</div>
+    </div>
+  </section>
+
+  <div class="progress" id="progress">
+    <div class="seg"><i class="seg-fill"></i></div>
+    <div class="seg"><i class="seg-fill"></i></div>
+    <div class="seg"><i class="seg-fill"></i></div>
+    <div class="seg"><i class="seg-fill"></i></div>
+  </div>
+
+  <button class="skip" id="skip" type="button">건너뛰기</button>
+</div>
+
+<main class="app-stub">
+  <div class="app-card">
+    <h2>여기가 실제 챗봇 화면 자리입니다</h2>
+    <p>인트로가 끝나면 드러나는 영역 — 프로토타입에서는 비워 두었습니다.</p>
+  </div>
+</main>
+
+<div class="devbar">
+  <b>PROTOTYPE</b>
+  <button id="replay" type="button">다시 재생</button>
+  <label>속도
+    <select id="speed">
+      <option value="0.5">0.5x</option>
+      <option value="1" selected>1x</option>
+      <option value="2">2x</option>
+    </select>
+  </label>
+</div>
+
+<script>
+  // ── 타이밍 (실제 적용 시 여기만 조절하면 된다) ───────────────────────────
+  const SLIDE_MS = 1900   // 업종 슬라이드 1장이 머무는 시간 (크로스페이드 포함)
+  const OUTRO_MS = 1900   // 마지막 로고 화면이 머무는 시간
+  const FADE_MS  = 700    // 인트로 전체가 사라지는 시간 (CSS --fade와 맞출 것)
+
+  const intro    = document.getElementById('intro')
+  const progress = document.getElementById('progress')
+  const slides   = Array.from(document.querySelectorAll('.slide'))
+  const fills    = Array.from(document.querySelectorAll('.seg-fill'))
+
+
+  let speed = 1
+  let timers = []
+
+  const later = (fn, ms) => timers.push(setTimeout(fn, ms))
+  const clearTimers = () => { timers.forEach(clearTimeout); timers = [] }
+
+  function run() {
+    clearTimers()
+    intro.hidden = false
+    intro.classList.remove('is-done')
+    progress.classList.remove('is-hidden')
+    slides.forEach((s) => s.classList.remove('is-active'))
+    fills.forEach((f) => { f.style.transition = 'none'; f.style.transform = 'scaleX(0)' })
+    void intro.offsetWidth // 리셋한 상태를 강제로 반영시킨 뒤 애니메이션을 시작한다
+
+    let at = 0
+    slides.forEach((slide, i) => {
+      const isOutro = i === slides.length - 1
+      const hold = (isOutro ? OUTRO_MS : SLIDE_MS) / speed
+      later(() => {
+        slides.forEach((s, n) => s.classList.toggle('is-active', n === i))
+        if (isOutro) {
+          progress.classList.add('is-hidden')
+        } else {
+          fills[i].style.transition = 'transform ' + hold + 'ms linear'
+          fills[i].style.transform = 'scaleX(1)'
+        }
+      }, at)
+      at += hold
+    })
+    later(finish, at)
+  }
+
+  function finish() {
+    clearTimers()
+    intro.classList.add('is-done')
+    later(() => { intro.hidden = true }, FADE_MS)
+  }
+
+  // 아무 데나 클릭하거나 키를 누르면 건너뛴다
+  intro.addEventListener('click', finish)
+  document.addEventListener('keydown', (e) => { if (!intro.hidden) { e.preventDefault(); finish() } })
+
+  document.getElementById('replay').addEventListener('click', run)
+  document.getElementById('speed').addEventListener('change', (e) => {
+    speed = Number(e.target.value)
+    run()
+  })
+
+  run()
+</script>
+
+</body>
+</html>
