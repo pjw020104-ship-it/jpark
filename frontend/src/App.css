@@ -1115,6 +1115,60 @@
   color: var(--text-muted);
 }
 
+/* ───────────── 추천 직무 카드 (적합도가 낮을 때) ───────────── */
+
+.rec-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rec-card {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rec-card:hover {
+  border-color: var(--accent);
+}
+
+.rec-role {
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  color: var(--text);
+}
+
+.rec-company {
+  margin-right: 8px;
+  color: var(--accent);
+}
+
+.rec-reason {
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.rec-go {
+  margin-top: 2px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--accent);
+}
+
 /* ───────────── 질문 목록 사이드바 (Notion 목차 스타일) ───────────── */
 
 .qnav {

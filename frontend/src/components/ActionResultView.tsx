@@ -1,15 +1,17 @@
 import ReactMarkdown from 'react-markdown'
 import remarkBreaks from 'remark-breaks'
 import remarkGfm from 'remark-gfm'
-import type { ActionResult } from './ActionMenu'
+import type { ActionResult, RoleRecommendation } from './ActionMenu'
 
 type Props = {
   result: ActionResult
+  /** 추천 직무를 고르면 그 직무로 대화를 이어간다 */
+  onPickRecommendation?: (recommendation: RoleRecommendation) => void
 }
 
 // prompt_function.txt: 출처는 접힌 토글로 시작해서 클릭하면 펼쳐지고,
 // 기사 링크는 새 탭에서 열리는 버튼 형태로 보여준다.
-export default function ActionResultView({ result }: Props) {
+export default function ActionResultView({ result, onPickRecommendation }: Props) {
   return (
     <div className="action-result">
       {result.fit && (
@@ -24,6 +26,23 @@ export default function ActionResultView({ result }: Props) {
       )}
 
       {result.notice && <p className="action-result-notice">{result.notice}</p>}
+
+      {result.recommendations && result.recommendations.length > 0 && (
+        <ul className="rec-list">
+          {result.recommendations.map((rec) => (
+            <li key={rec.position_id}>
+              <button type="button" className="rec-card" onClick={() => onPickRecommendation?.(rec)}>
+                <span className="rec-role">
+                  <span className="rec-company">{rec.company_name}</span>
+                  {rec.position_name}
+                </span>
+                {rec.reason && <span className="rec-reason">{rec.reason}</span>}
+                <span className="rec-go">이 직무로 이어서 보기 →</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
 
       {result.blocks.length === 0 && !result.notice && (
         <p className="action-result-notice">아직 준비된 내용이 없습니다.</p>

@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkBreaks from 'remark-breaks'
 import remarkGfm from 'remark-gfm'
 import hanwhaLogo from './assets/hanwha_logo.png'
-import ActionMenu, { type ActionKey, type ActionResult } from './components/ActionMenu'
+import ActionMenu, { type ActionKey, type ActionResult, type RoleRecommendation } from './components/ActionMenu'
 import ActionResultView from './components/ActionResultView'
 import IntroSplash from './components/IntroSplash'
 import { shouldShowActionMenu } from './lib/actionTrigger'
@@ -242,6 +242,18 @@ function App() {
     setJobTitle('')
   }
 
+  // 추천 직무를 고르면 그 회사·직무로 새 질문을 띄운다.
+  // handleJobLookup과 같은 방식으로 resolvedMeta를 등록해야 액션 버튼이 그 직무 기준으로 붙는다.
+  const pickRecommendation = (rec: RoleRecommendation) => {
+    if (isStreaming) return
+    setCompanyId(rec.company_id)
+    setResolvedMeta((prev) => ({
+      ...prev,
+      [entries.length]: { companyId: rec.company_id, positionId: rec.position_id },
+    }))
+    sendMessage(`${rec.company_name}의 "${rec.position_name}" 직무에 대해 알려줘.`)
+  }
+
   const handleFollowUp = (e: FormEvent) => {
     e.preventDefault()
     sendMessage(followUp)
@@ -347,7 +359,7 @@ function App() {
               <div className="entry-query">{entry.query.content}</div>
               <div className="entry-answer">
                 {entry.answer?.kind === 'action-result' && entry.answer.result ? (
-                  <ActionResultView result={entry.answer.result} />
+                  <ActionResultView result={entry.answer.result} onPickRecommendation={pickRecommendation} />
                 ) : entry.answer?.content ? (
                   <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{entry.answer.content}</ReactMarkdown>
                 ) : isStreaming && index === entries.length - 1 ? (

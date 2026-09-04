@@ -2,6 +2,7 @@ import { findCompany, findJob } from "../_lib/dataStore.js";
 import { setActiveContext } from "../_lib/sessionStore.js";
 import { generateScenario } from "../_lib/features/scenario.js";
 import { analyzeGap } from "../_lib/features/gapAnalysis.js";
+import { recommendRoles, shouldRecommendInstead } from "../_lib/features/recommend.js";
 import { getJobIssues } from "../_lib/features/issues.js";
 import { generateInterviewQuestions } from "../_lib/features/interview.js";
 import { describeLlmError } from "../_lib/llm.js";
@@ -67,6 +68,27 @@ export async function onRequestPost({ request, env }) {
             portfolioFileNames: portfolio_file_names,
             apiKey,
           });
+          // §4.2 확장: 적합도가 낮으면 진단을 이어가지 않고 더 맞는 직무를 추천한다.
+          // 추천이 하나도 안 나오면 원래 진단 결과를 그대로 보여준다.
+          if (shouldRecommendInstead(result.fit)) {
+            const recommendations = await recommendRoles({
+              coverLetterText: cover_letter_text,
+              portfolioText: portfolio_text,
+              excludePositionId: positionId,
+              apiKey,
+            });
+            if (recommendations.length > 0) {
+              result = {
+                blocks: [],
+                sources: [],
+                state: "ok",
+                fit: result.fit,
+                notice: "지원자님의 자기소개서 내용으로 미루어 보아 현재 회사·직무와는 잘 맞지 않습니다. 제가 더 적합한 회사와 직무를 추천해 드릴게요.",
+                recommendations,
+              };
+            }
+          }
+
           if (result.state === "ok") {
             session.coverLetterSummary = cover_letter_text;
             session.portfolioSummary = portfolio_text;

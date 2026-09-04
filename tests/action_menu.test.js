@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { generateScenario } from "../backend/features/scenario.js";
 import { analyzeGap } from "../backend/features/gapAnalysis.js";
 import { getJobIssues } from "../backend/features/issues.js";
+import { recommendRoles, shouldRecommendInstead, buildCatalog } from "../backend/features/recommend.js";
 import { generateInterviewQuestions } from "../backend/features/interview.js";
 import { redact } from "../backend/profile/redact.js";
 import { containsForbiddenPattern } from "../backend/features/guard.js";
@@ -225,6 +226,86 @@ describe("§4.2 역량 진단 (gap analysis)", () => {
     expect(capturedPrompt).not.toContain("연세대학교");
     expect(capturedPrompt).not.toContain("010-1234-5678");
     expect(capturedPrompt).toContain("이력서.pdf p.1"); // 출처 머리말은 인용을 위해 남아야 한다
+  });
+});
+
+describe("§4.2 확장: 적합도가 낮으면 다른 직무를 추천", () => {
+  const CATALOG = [
+    { company_id: "c1", company_name: "한화건설", position_id: "c1.job1", position_name: "건축" },
+    { company_id: "c2", company_name: "한화투자증권", position_id: "c2.job1", position_name: "IB" },
+    { company_id: "c2", company_name: "한화투자증권", position_id: "c2.job2", position_name: "법인영업" },
+  ];
+
+  it("80점 미만일 때만 추천으로 넘어간다", () => {
+    expect(shouldRecommendInstead({ score: 75 })).toBe(true);
+    expect(shouldRecommendInstead({ score: 79 })).toBe(true);
+    expect(shouldRecommendInstead({ score: 80 })).toBe(false);
+    expect(shouldRecommendInstead({ score: 95 })).toBe(false);
+    expect(shouldRecommendInstead(undefined)).toBe(false);
+  });
+
+  it("목록에 있는 직무만 추천으로 내보낸다", async () => {
+    const generate = vi.fn().mockResolvedValue(
+      JSON.stringify({
+        recommendations: [
+          { position_id: "c2.job1", reason: "경영학 전공과 재무 분석 경험" },
+          { position_id: "없는.직무", reason: "지어낸 값" },
+          { position_id: "c2.job2", reason: "영업 인턴 경험" },
+        ],
+      }),
+    );
+
+    const result = await recommendRoles({
+      coverLetterText: "경영학과 졸업, 재무 분석 인턴",
+      excludePositionId: "c1.job1",
+      catalog: CATALOG,
+      generate,
+    });
+
+    expect(result.map((r) => r.position_id)).toEqual(["c2.job1", "c2.job2"]);
+    expect(result[0].company_name).toBe("한화투자증권");
+    expect(result[0].reason).toContain("경영학");
+  });
+
+  it("지금 보고 있던 직무는 후보에서 제외한다", async () => {
+    let captured = "";
+    const generate = vi.fn().mockImplementation(async ({ prompt }) => {
+      captured = prompt;
+      return JSON.stringify({ recommendations: [] });
+    });
+
+    await recommendRoles({
+      coverLetterText: "경영학과 졸업",
+      excludePositionId: "c1.job1",
+      catalog: CATALOG,
+      generate,
+    });
+
+    expect(captured).not.toContain("c1.job1");
+    expect(captured).toContain("c2.job1");
+  });
+
+  it("추천 자료도 마스킹을 거쳐 LLM에 전달된다", async () => {
+    let captured = "";
+    const generate = vi.fn().mockImplementation(async ({ prompt }) => {
+      captured = prompt;
+      return JSON.stringify({ recommendations: [] });
+    });
+
+    await recommendRoles({
+      coverLetterText: "연세대학교 경영학과 졸업\n연락처: 010-1234-5678",
+      catalog: CATALOG,
+      generate,
+    });
+
+    expect(captured).not.toContain("연세대학교");
+    expect(captured).not.toContain("010-1234-5678");
+  });
+
+  it("실제 데이터로 만든 목록은 회사명과 직무명이 모두 채워진다", () => {
+    const catalog = buildCatalog();
+    expect(catalog.length).toBeGreaterThan(50);
+    expect(catalog.every((c) => c.company_name && c.position_name && c.position_id)).toBe(true);
   });
 });
 

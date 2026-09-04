@@ -11,6 +11,15 @@ export type ActionKey = 'job_description' | 'skill_gap' | 'job_issues' | 'interv
 export type ActionBlock = { label: string; content: string }
 export type ActionSource = { outlet?: string; date?: string; url?: string }
 
+/** 적합도가 낮을 때 진단 대신 제시하는 다른 계열사·직무 */
+export type RoleRecommendation = {
+  company_id: string
+  company_name: string
+  position_id: string
+  position_name: string
+  reason: string
+}
+
 export type ActionResult = {
   action: ActionKey
   blocks: ActionBlock[]
@@ -20,6 +29,8 @@ export type ActionResult = {
   notice?: string
   /** 역량 진단(skill_gap) 전용: 직무 적합도 점수 (0~100) */
   fit?: { score: number; summary?: string }
+  /** 적합도가 낮아 진단 대신 다른 직무를 제안한 경우 */
+  recommendations?: RoleRecommendation[]
 }
 
 // SPEC §4.5 버튼 순서·라벨은 고정
