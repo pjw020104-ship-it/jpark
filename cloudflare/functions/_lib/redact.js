@@ -1,7 +1,9 @@
 const LABELED_LINE_DROP = /^\s*(생년월일|나이|출생연도|출생년도|성별|사진|주소|거주지|연락처|전화|휴대전화|휴대폰|이메일|email)\s*[:：]/i;
 const LABELED_SCHOOL_LINE = /^\s*(학교|출신학교|대학교|대학)\s*[:：]\s*.*/i;
 
-const UNIVERSITY_NAME = /[가-힣A-Za-z]{1,12}\s?(대학교|대학|University)\b/g;
+// 한글은 \w가 아니라서 뒤에 \b를 쓰면 "연세대학교 졸업"처럼 한글이 이어질 때 매칭이 실패했다.
+// "학교:" 라벨이 없는 줄의 학교명이 그대로 새던 문제라 lookahead로 바꿨다.
+const UNIVERSITY_NAME = /[가-힣A-Za-z]{1,12}\s?(대학교|대학원|대학|University)(?![가-힣A-Za-z])/g;
 const BIRTH_DATE = /(19|20)\d{2}\s?[.\-/년]\s?\d{1,2}\s?[.\-/월]?\s?(\d{1,2}\s?일?)?\s?(생|출생)?/g;
 const AGE = /\b(만\s?)?\d{1,2}\s?세\b/g;
 const PHONE = /01[016789]-?\d{3,4}-?\d{4}/g;

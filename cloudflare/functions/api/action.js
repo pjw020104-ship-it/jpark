@@ -7,10 +7,22 @@ import { generateInterviewQuestions } from "../_lib/features/interview.js";
 import { describeLlmError } from "../_lib/llm.js";
 
 const today = () => new Date().toISOString().slice(0, 10);
+// 같은 자료를 다시 제출했을 때 점수가 달라지지 않게 하기 위한 캐시 키.
+// LLM은 temperature 0에서도 완전히 결정적이지 않아서, 입력이 같으면 저장된 결과를 그대로 돌려준다.
+function gapCacheKey(companyId, positionId, coverLetter, portfolio) {
+  const source = `${companyId}|${positionId}|${coverLetter ?? ""}|${portfolio ?? ""}`;
+  let hash = 2166136261;
+  for (let i = 0; i < source.length; i += 1) {
+    hash ^= source.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `${source.length}:${(hash >>> 0).toString(36)}`;
+}
 
 // §4.5: 직무 4버튼 라우팅. 기능 로직은 _lib/features/*.js에 위임하고 여기서는 라우팅만 한다.
 export async function onRequestPost({ request, env }) {
-  const { session_id, action, company_id, position_id, cover_letter_text, portfolio_text } = await request.json();
+  const { session_id, action, company_id, position_id, cover_letter_text, portfolio_text, portfolio_file_names } =
+    await request.json();
 
   if (!session_id || !action) {
     return Response.json({ error: "session_id, action이 필요합니다." }, { status: 400 });
@@ -43,16 +55,24 @@ export async function onRequestPost({ request, env }) {
       case "skill_gap": {
         // 이 요청에 직접 실린 텍스트만 사용한다. 세션에 남아있는 이전 값으로
         // 조용히 대체하지 않는다 - 사용자가 입력하지 않은 자료로 답하는 것을 방지한다.
-        result = await analyzeGap({
-          role: found.role,
-          coverLetterText: cover_letter_text,
-          portfolioText: portfolio_text,
-          apiKey,
-        });
-        if (result.state === "ok") {
-          session.coverLetterSummary = cover_letter_text;
-          session.portfolioSummary = portfolio_text;
-          session.lastGapAnalysis = result;
+        const cacheKey = gapCacheKey(companyId, positionId, cover_letter_text, portfolio_text);
+        if (session.gapCacheKey === cacheKey && session.lastGapAnalysis) {
+          result = session.lastGapAnalysis;
+        } else {
+          result = await analyzeGap({
+            role: found.role,
+            companyName: company.name_ko,
+            coverLetterText: cover_letter_text,
+            portfolioText: portfolio_text,
+            portfolioFileNames: portfolio_file_names,
+            apiKey,
+          });
+          if (result.state === "ok") {
+            session.coverLetterSummary = cover_letter_text;
+            session.portfolioSummary = portfolio_text;
+            session.lastGapAnalysis = result;
+            session.gapCacheKey = cacheKey;
+          }
         }
         break;
       }

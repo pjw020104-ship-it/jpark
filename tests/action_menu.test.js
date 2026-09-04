@@ -58,20 +58,19 @@ describe("§4.2 역량 진단 (gap analysis)", () => {
     expect(result.state).toBe("needs_profile");
   });
 
-  it("응답에 숫자+% 패턴이나 '적합도', '합격 가능성' 문자열이 없다", async () => {
+  it("응답에 숫자+% 패턴이나 '합격 가능성' 문자열이 없다", async () => {
     const generate = vi.fn().mockResolvedValue(
       JSON.stringify({
-        experiences: [],
+        fit_score: 62,
         strengths: [
           {
-            skill: "엑셀 재무모델링",
-            evidence_experience: "인턴 경험",
-            requirement_link: "적합도 78%로 매우 우수함",
-            resume_expression: "합격 가능성을 높이려면 이렇게 쓰세요",
+            title: "엑셀 재무모델링",
+            evidence: "인턴 경험",
+            requirement_link: "78%로 매우 우수함",
+            source: "자기소개서",
           },
         ],
-        gaps: [],
-        hidden_strengths: [],
+        gaps: [{ title: "합격 가능성을 높이려면 이렇게 쓰세요", why: "", how_to_fill: "" }],
       }),
     );
 
@@ -79,6 +78,109 @@ describe("§4.2 역량 진단 (gap analysis)", () => {
     const joined = result.blocks.map((b) => b.content).join("\n");
 
     expect(containsForbiddenPattern(joined)).toBe(false);
+  });
+
+  it("적합도 점수는 5점 단위로 스냅되고, 범위를 벗어나면 아예 표시하지 않는다", async () => {
+    const withScore = (value) =>
+      vi.fn().mockResolvedValue(JSON.stringify({ fit_score: value, strengths: [], gaps: [] }));
+
+    // 같은 자료를 다시 제출했을 때 62/64처럼 미세하게 흔들리는 값이 다른 판정으로 보이면 안 된다
+    for (const [given, expected] of [
+      [73, 75],
+      [62, 60],
+      [64, 65],
+      [60, 60],
+      [0, 0],
+      [100, 100],
+    ]) {
+      const result = await analyzeGap({ role: ROLE, coverLetterText: "경력 5년", generate: withScore(given) });
+      expect(result.fit.score).toBe(expected);
+    }
+
+    for (const bad of [120, -5, "높음", null]) {
+      const result = await analyzeGap({ role: ROLE, coverLetterText: "경력 5년", generate: withScore(bad) });
+      expect(result.fit).toBeUndefined();
+    }
+  });
+
+  it("점수는 모델이 부른 숫자가 아니라 핵심 역량 판정에서 계산한다", async () => {
+    // 충분(2) + 보통(1) + 확인 불가(0) + 부족(0) = 3 / 8 = 37.5 -> 5점 단위 반올림 40
+    const generate = vi.fn().mockResolvedValue(
+      JSON.stringify({
+        fit_score: 90, // 모델이 엉뚱하게 높게 불러도 무시돼야 한다
+        core_competencies: [
+          { competency: "A", level: "충분" },
+          { competency: "B", level: "보통" },
+          { competency: "C", level: "확인 불가" },
+          { competency: "D", level: "부족" },
+        ],
+      }),
+    );
+
+    const result = await analyzeGap({ role: ROLE, coverLetterText: "경력 5년", generate });
+    expect(result.fit.score).toBe(40);
+  });
+
+  it("역량 등급을 읽을 수 없으면 모델이 준 점수로 넘어간다", async () => {
+    const generate = vi.fn().mockResolvedValue(
+      JSON.stringify({ fit_score: 71, core_competencies: [{ competency: "A", level: "매우 좋음" }] }),
+    );
+
+    const result = await analyzeGap({ role: ROLE, coverLetterText: "경력 5년", generate });
+    expect(result.fit.score).toBe(70);
+  });
+
+  it("같은 자료를 넣으면 temperature 0으로 호출한다", async () => {
+    const generate = vi.fn().mockResolvedValue(JSON.stringify({ fit_score: 50 }));
+    await analyzeGap({ role: ROLE, coverLetterText: "경력 5년", generate });
+    expect(generate.mock.calls[0][0].temperature).toBe(0);
+  });
+
+  it("요구사항 6의 다섯 항목을 모두 블록으로 낸다", async () => {
+    const generate = vi.fn().mockResolvedValue(JSON.stringify({ fit_score: 50 }));
+    const result = await analyzeGap({ role: ROLE, coverLetterText: "경력 5년", generate });
+
+    expect(result.blocks.map((b) => b.label)).toEqual([
+      "[주요 강점]",
+      "[부족하거나 확인되지 않는 역량]",
+      "[직무별 핵심 역량 평가]",
+      "[자기소개서에서 강조할 경험]",
+      "[면접에서 활용할 경험 및 예상 질문]",
+    ]);
+  });
+
+  it("첨부 파일에서 찾은 근거는 파일명·페이지와 함께 표시된다", async () => {
+    const generate = vi.fn().mockResolvedValue(
+      JSON.stringify({
+        fit_score: 70,
+        strengths: [{ title: "데이터 파이프라인 구축", evidence: "ETL 설계", source: "포트폴리오.pdf p.4" }],
+      }),
+    );
+
+    const result = await analyzeGap({
+      role: ROLE,
+      companyName: "한화시스템",
+      coverLetterText: "경력 5년",
+      portfolioText: "[출처: 포트폴리오.pdf p.4]\nETL 파이프라인을 설계했다",
+      portfolioFileNames: ["포트폴리오.pdf"],
+      generate,
+    });
+
+    const strengths = result.blocks.find((b) => b.label === "[주요 강점]");
+    expect(strengths.content).toContain("포트폴리오.pdf p.4");
+
+    // 회사명과 첨부 파일명이 프롬프트에 실려야 §4.2가 회사·직무 기준으로 진단할 수 있다
+    const prompt = generate.mock.calls[0][0].prompt;
+    expect(prompt).toContain("한화시스템");
+    expect(prompt).toContain("포트폴리오.pdf");
+  });
+
+  it("모델 응답이 JSON이 아니면 state=fallback이고 블록을 만들지 않는다", async () => {
+    const generate = vi.fn().mockResolvedValue("죄송합니다, 답변할 수 없습니다.");
+    const result = await analyzeGap({ role: ROLE, coverLetterText: "경력 5년", generate });
+
+    expect(result.state).toBe("fallback");
+    expect(result.blocks).toHaveLength(0);
   });
 
   it("redact를 거치지 않은 원문이 LLM 호출 인자에 포함되면 실패한다", async () => {
@@ -94,7 +196,7 @@ describe("§4.2 역량 진단 (gap analysis)", () => {
     let capturedPrompt = "";
     const generate = vi.fn().mockImplementation(async ({ prompt }) => {
       capturedPrompt = prompt;
-      return JSON.stringify({ experiences: [], strengths: [], gaps: [], hidden_strengths: [] });
+      return JSON.stringify({ fit_score: 40, strengths: [], gaps: [] });
     });
 
     await analyzeGap({ role: ROLE, coverLetterText: rawResume, generate });
@@ -103,6 +205,26 @@ describe("§4.2 역량 진단 (gap analysis)", () => {
     expect(capturedPrompt).not.toContain("1999-03-02");
     expect(capturedPrompt).not.toContain("010-1234-5678");
     expect(capturedPrompt).not.toContain("서울시 강남구 테헤란로 123");
+  });
+
+  it("첨부 파일에서 추출한 텍스트도 마스킹을 거쳐 LLM에 전달된다", async () => {
+    let capturedPrompt = "";
+    const generate = vi.fn().mockImplementation(async ({ prompt }) => {
+      capturedPrompt = prompt;
+      return JSON.stringify({ fit_score: 40, strengths: [], gaps: [] });
+    });
+
+    await analyzeGap({
+      role: ROLE,
+      coverLetterText: "재무팀 인턴 경험",
+      portfolioText: "[출처: 이력서.pdf p.1]\n연세대학교 졸업\n연락처: 010-1234-5678",
+      portfolioFileNames: ["이력서.pdf"],
+      generate,
+    });
+
+    expect(capturedPrompt).not.toContain("연세대학교");
+    expect(capturedPrompt).not.toContain("010-1234-5678");
+    expect(capturedPrompt).toContain("이력서.pdf p.1"); // 출처 머리말은 인용을 위해 남아야 한다
   });
 });
 
@@ -116,13 +238,50 @@ describe("redact()", () => {
   });
 });
 
-describe("§4.4 직무 이슈 분석 (검색 그라운딩 없음)", () => {
-  it("insufficient 플래그가 true면 fallback이고 회사/직무명이 안내에 포함된다", async () => {
-    const generate = vi.fn().mockResolvedValue(
-      JSON.stringify({ insufficient: true, company_issues: [], job_issues: [] }),
-    );
+describe("§4.4 직무 이슈 분석 (Google 검색 그라운딩)", () => {
+  const NEWS_SOURCES = [
+    { outlet: "yna.co.kr", url: "https://vertexaisearch.cloud.google.com/grounding-api-redirect/aaa" },
+    { outlet: "chosun.com", url: "https://vertexaisearch.cloud.google.com/grounding-api-redirect/bbb" },
+  ];
 
-    const result = await getJobIssues({ companyName: "한화에어로스페이스", roleName: "R&D/설계", generate });
+  // 1단계(검색)는 자유 서술 + 출처, 2단계(구조화)는 JSON 문자열을 돌려준다.
+  const research = (sources = NEWS_SOURCES, text = "조사 결과 본문") => vi.fn().mockResolvedValue({ text, sources });
+  const structure = (payload) => vi.fn().mockResolvedValue(JSON.stringify(payload));
+
+  const ARGS = { companyName: "한화에어로스페이스", roleName: "R&D/설계" };
+
+  it("검색을 먼저 하고, 그 결과만 2단계 구조화 프롬프트에 넘긴다", async () => {
+    const doResearch = research(NEWS_SOURCES, "연합뉴스 2026-08-30 보도: 수출 계약 체결");
+    const doStructure = structure({
+      insufficient: false,
+      company_issues: [{ headline: "h", background: "b", work_impact: "w", interview_angle: "i" }],
+      job_issues: [],
+    });
+
+    await getJobIssues({ ...ARGS, research: doResearch, structure: doStructure });
+
+    expect(doResearch).toHaveBeenCalledTimes(1);
+    // 2단계는 검색 결과 텍스트만 받는다 - 여기서 새 사실이 끼어들 자리가 없어야 한다
+    expect(doStructure.mock.calls[0][0].prompt).toBe("연합뉴스 2026-08-30 보도: 수출 계약 체결");
+  });
+
+  it("그라운딩 출처가 하나도 없으면 검색이 안 된 것이므로 구조화하지 않고 fallback이다", async () => {
+    const doStructure = structure({ insufficient: false, company_issues: [], job_issues: [] });
+
+    const result = await getJobIssues({ ...ARGS, research: research([]), structure: doStructure });
+
+    expect(result.state).toBe("fallback");
+    expect(result.blocks).toHaveLength(0);
+    expect(result.notice).toContain("검색하지 못했습니다");
+    expect(doStructure).not.toHaveBeenCalled(); // 근거 없는 2차 호출로 돈을 쓰지 않는다
+  });
+
+  it("insufficient 플래그가 true면 fallback이고 회사/직무명이 안내에 포함된다", async () => {
+    const result = await getJobIssues({
+      ...ARGS,
+      research: research(),
+      structure: structure({ insufficient: true, company_issues: [], job_issues: [] }),
+    });
 
     expect(result.state).toBe("fallback");
     expect(result.blocks).toHaveLength(0);
@@ -131,35 +290,69 @@ describe("§4.4 직무 이슈 분석 (검색 그라운딩 없음)", () => {
   });
 
   it("headline/background/work_impact 중 하나라도 비어 있으면 그 이슈는 제외된다", async () => {
-    const generate = vi.fn().mockResolvedValue(
-      JSON.stringify({
+    const result = await getJobIssues({
+      ...ARGS,
+      research: research(),
+      structure: structure({
         insufficient: false,
         company_issues: [{ headline: "", background: "b", work_impact: "w", interview_angle: "i" }],
         job_issues: [],
       }),
-    );
+    });
 
-    const result = await getJobIssues({ companyName: "한화에어로스페이스", roleName: "R&D/설계", generate });
     expect(result.state).toBe("fallback");
   });
 
-  it("완전한 이슈가 있으면 회사/직무로 구분해서 반환하고, 검색 그라운딩이 없다는 안내를 포함한다", async () => {
-    const generate = vi.fn().mockResolvedValue(
-      JSON.stringify({
+  it("완전한 이슈가 있으면 회사/직무로 구분해 반환하고 검색 출처 URL을 함께 낸다", async () => {
+    const result = await getJobIssues({
+      ...ARGS,
+      research: research(),
+      structure: structure({
         insufficient: false,
-        company_issues: [{ headline: "회사 전체 이슈", background: "b", work_impact: "w", interview_angle: "i" }],
+        company_issues: [
+          {
+            headline: "회사 전체 이슈",
+            outlet: "연합뉴스",
+            published_at: "2026-08-30",
+            background: "b",
+            work_impact: "w",
+            interview_angle: "i",
+          },
+        ],
         job_issues: [{ headline: "직무 관련 이슈", background: "b2", work_impact: "w2", interview_angle: "i2" }],
       }),
-    );
+    });
 
-    const result = await getJobIssues({ companyName: "한화에어로스페이스", roleName: "R&D/설계", generate });
+    // 이슈 하나가 블록 하나다. 배경/실무 영향/면접 관점이 별도 블록으로 흩어지면 안 된다.
+    expect(result.blocks.map((b) => b.label)).toEqual(["[안내]", "1. 회사 이슈", "1. 직무 이슈"]);
 
-    const labels = result.blocks.map((b) => b.label);
-    expect(labels).toContain("[회사 이슈]");
-    expect(labels).toContain("[직무 이슈]");
-    expect(labels).toContain("[안내]");
-    expect(labels).not.toContain("[이슈]"); // 헤드라인은 [회사 이슈]/[직무 이슈] 라벨에 합쳐져야 하고 별도 [이슈] 라벨이 중복되면 안 된다
-    expect(result.sources).toHaveLength(0);
+    const companyIssue = result.blocks[1];
+    expect(companyIssue.content).toContain("**회사 전체 이슈**");
+    expect(companyIssue.content).toContain("_연합뉴스 · 2026-08-30_");
+    expect(companyIssue.content).toContain("- **배경** — b");
+    expect(companyIssue.content).toContain("- **실무 영향** — w");
+    expect(companyIssue.content).toContain("- **면접 관점** — i");
+
+    // 출처 URL은 모델 본문이 아니라 그라운딩 메타데이터에서 온 것만 나간다
+    expect(result.sources).toEqual(NEWS_SOURCES);
+  });
+
+  it("매체·보도일자를 확인하지 못한 이슈에는 보도 줄을 붙이지 않는다", async () => {
+    const result = await getJobIssues({
+      ...ARGS,
+      research: research(),
+      structure: structure({
+        insufficient: false,
+        company_issues: [
+          { headline: "h", outlet: "확인 안 됨", published_at: "", background: "b", work_impact: "w", interview_angle: "i" },
+        ],
+        job_issues: [],
+      }),
+    });
+
+    expect(result.blocks[1].content).not.toContain("확인 안 됨");
+    // 보도 줄이 빠지면 헤드라인 바로 다음이 빈 줄이어야 한다
+    expect(result.blocks[1].content.split("\n")[1]).toBe("");
   });
 });
 

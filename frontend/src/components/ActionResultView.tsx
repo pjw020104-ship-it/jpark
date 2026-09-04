@@ -1,4 +1,5 @@
 import ReactMarkdown from 'react-markdown'
+import remarkBreaks from 'remark-breaks'
 import remarkGfm from 'remark-gfm'
 import type { ActionResult } from './ActionMenu'
 
@@ -11,6 +12,17 @@ type Props = {
 export default function ActionResultView({ result }: Props) {
   return (
     <div className="action-result">
+      {result.fit && (
+        <div className="action-result-fit">
+          <span className="action-result-fit-label">직무 적합도</span>
+          <strong className="action-result-fit-score">
+            {result.fit.score}
+            <span> / 100</span>
+          </strong>
+          {result.fit.summary && <p className="action-result-fit-summary">{result.fit.summary}</p>}
+        </div>
+      )}
+
       {result.notice && <p className="action-result-notice">{result.notice}</p>}
 
       {result.blocks.length === 0 && !result.notice && (
@@ -21,7 +33,10 @@ export default function ActionResultView({ result }: Props) {
         <div key={i} className="action-result-block">
           <div className="action-result-label">{block.label}</div>
           <div className="action-result-content">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{block.content}</ReactMarkdown>
+            {/* 블록 본문은 "상황: … / 역할: …"처럼 한 줄에 한 항목이 온다.
+                마크다운 기본 규칙은 홑 줄바꿈을 무시해 한 문단으로 붙여버리므로
+                remark-breaks로 줄바꿈을 그대로 살린다. */}
+            <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{block.content}</ReactMarkdown>
           </div>
         </div>
       ))}
