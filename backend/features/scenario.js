@@ -40,7 +40,7 @@ export async function generateScenario({ role, companyName, generate = generateU
   }
 
   return {
-    blocks: [{ label: "[직무 설명]", content: text }],
+    blocks: [{ label: "직무 설명", content: text }],
     sources: sources ?? [],
     state: "ok",
   };

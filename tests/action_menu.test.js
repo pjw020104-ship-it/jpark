@@ -141,12 +141,13 @@ describe("§4.2 역량 진단 (gap analysis)", () => {
     const generate = vi.fn().mockResolvedValue(JSON.stringify({ fit_score: 50 }));
     const result = await analyzeGap({ role: ROLE, coverLetterText: "경력 5년", generate });
 
+    // 라벨에 대괄호를 쓰지 않는다. 기계가 찍어낸 메타 라벨처럼 보인다.
     expect(result.blocks.map((b) => b.label)).toEqual([
-      "[주요 강점]",
-      "[부족하거나 확인되지 않는 역량]",
-      "[직무별 핵심 역량 평가]",
-      "[자기소개서에서 강조할 경험]",
-      "[면접에서 활용할 경험 및 예상 질문]",
+      "주요 강점",
+      "부족하거나 확인되지 않는 역량",
+      "직무별 핵심 역량 평가",
+      "자기소개서에서 강조할 경험",
+      "면접에서 활용할 경험 및 예상 질문",
     ]);
   });
 
@@ -167,7 +168,7 @@ describe("§4.2 역량 진단 (gap analysis)", () => {
       generate,
     });
 
-    const strengths = result.blocks.find((b) => b.label === "[주요 강점]");
+    const strengths = result.blocks.find((b) => b.label === "주요 강점");
     expect(strengths.content).toContain("포트폴리오.pdf p.4");
 
     // 회사명과 첨부 파일명이 프롬프트에 실려야 §4.2가 회사·직무 기준으로 진단할 수 있다
@@ -405,9 +406,11 @@ describe("§4.4 직무 이슈 분석 (Google 검색 그라운딩)", () => {
     });
 
     // 이슈 하나가 블록 하나다. 배경/실무 영향/면접 관점이 별도 블록으로 흩어지면 안 된다.
-    expect(result.blocks.map((b) => b.label)).toEqual(["[안내]", "1. 회사 이슈", "1. 직무 이슈"]);
+    // 안내 문구는 블록이 아니라 notice로 나간다.
+    expect(result.blocks.map((b) => b.label)).toEqual(["1. 회사 이슈", "1. 직무 이슈"]);
+    expect(result.notice).toContain("출처");
 
-    const companyIssue = result.blocks[1];
+    const companyIssue = result.blocks[0];
     expect(companyIssue.content).toContain("**회사 전체 이슈**");
     expect(companyIssue.content).toContain("_연합뉴스 · 2026-08-30_");
     expect(companyIssue.content).toContain("- **배경** — b");
@@ -431,9 +434,9 @@ describe("§4.4 직무 이슈 분석 (Google 검색 그라운딩)", () => {
       }),
     });
 
-    expect(result.blocks[1].content).not.toContain("확인 안 됨");
+    expect(result.blocks[0].content).not.toContain("확인 안 됨");
     // 보도 줄이 빠지면 헤드라인 바로 다음이 빈 줄이어야 한다
-    expect(result.blocks[1].content.split("\n")[1]).toBe("");
+    expect(result.blocks[0].content.split("\n")[1]).toBe("");
   });
 });
 

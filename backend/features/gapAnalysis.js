@@ -147,7 +147,7 @@ export async function analyzeGap({
   const blocks = [];
 
   blocks.push({
-    label: "[주요 강점]",
+    label: "주요 강점",
     content: bulletList(
       parsed.strengths,
       (s) =>
@@ -163,7 +163,7 @@ export async function analyzeGap({
   });
 
   blocks.push({
-    label: "[부족하거나 확인되지 않는 역량]",
+    label: "부족하거나 확인되지 않는 역량",
     content: bulletList(
       parsed.gaps,
       (g) =>
@@ -180,7 +180,7 @@ export async function analyzeGap({
 
   const competencies = parsed.core_competencies ?? [];
   blocks.push({
-    label: "[직무별 핵심 역량 평가]",
+    label: "직무별 핵심 역량 평가",
     content:
       competencies.length > 0
         ? [
@@ -202,7 +202,7 @@ export async function analyzeGap({
   });
 
   blocks.push({
-    label: "[자기소개서에서 강조할 경험]",
+    label: "자기소개서에서 강조할 경험",
     content: bulletList(
       parsed.resume_highlights,
       (h) =>
@@ -218,7 +218,7 @@ export async function analyzeGap({
   });
 
   blocks.push({
-    label: "[면접에서 활용할 경험 및 예상 질문]",
+    label: "면접에서 활용할 경험 및 예상 질문",
     content: bulletList(
       parsed.interview_items,
       (q) =>

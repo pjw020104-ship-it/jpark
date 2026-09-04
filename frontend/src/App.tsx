@@ -25,7 +25,7 @@ const SESSION_KEY = 'hanwha-explainer-session-id'
 const WELCOME: Message = {
   role: 'assistant',
   content:
-    '안녕하세요! 저는 한화 지원자를 위한 직무 가이드예요. 회사와 직무명을 입력하면 어떤 일을 하는지, 어떤 역량이 필요한지, 최근 이슈는 뭔지 정리해드릴게요 🙂',
+    '계열사와 직무를 고르면 실제로 하는 일, 필요한 역량, 최근 이슈를 정리해 드립니다.',
 }
 
 function loadMessages(): Message[] {
@@ -180,7 +180,7 @@ function App() {
           if (payload.error) {
             setMessages((prev) => {
               const updated = [...prev]
-              updated[updated.length - 1] = { role: 'assistant', content: `⚠️ ${payload.error}` }
+              updated[updated.length - 1] = { role: 'assistant', content: payload.error }
               return updated
             })
           }
@@ -192,7 +192,7 @@ function App() {
         const updated = [...prev]
         updated[updated.length - 1] = {
           role: 'assistant',
-          content: '⚠️ 서버와 통신 중 오류가 발생했습니다. 백엔드 서버가 실행 중인지 확인해주세요.',
+          content: '서버와 통신하지 못했습니다. 잠시 후 다시 시도해 주세요.',
         }
         return updated
       })
@@ -296,7 +296,7 @@ function App() {
               </h1>
               <p>회사와 직무를 입력하면 하는 일 · 필요 역량 · 최근 이슈를 알려드려요</p>
               <a className="brand-link" href="https://www.hanwhain.com/" target="_blank" rel="noreferrer">
-                한화 채용사이트 바로가기 →
+                한화 채용사이트
               </a>
             </div>
           </div>
@@ -313,7 +313,7 @@ function App() {
               <input
                 value={jobTitle}
                 onChange={(e) => setJobTitle(e.target.value)}
-                placeholder="직무명을 입력하세요 (예: 생산관리, 해외영업...)"
+                placeholder="직무명 입력 (예: 생산관리, 해외영업)"
                 disabled={isStreaming}
               />
               <button type="submit" disabled={isStreaming || !jobTitle.trim() || !resolvedCompanyName}>
@@ -403,7 +403,7 @@ function App() {
         <input
           value={followUp}
           onChange={(e) => setFollowUp(e.target.value)}
-          placeholder="답변하거나 추가로 궁금한 점을 입력하세요..."
+          placeholder="궁금한 점을 입력하세요"
           disabled={isStreaming}
         />
         <button type="submit" disabled={isStreaming || !followUp.trim()}>

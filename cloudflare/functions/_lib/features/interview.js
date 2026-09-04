@@ -51,7 +51,7 @@ export async function generateInterviewQuestions({ role, coverLetterText, apiKey
 
   const blocks = [
     {
-      label: "[예상 질문] JD 기반",
+      label: "예상 질문 JD 기반",
       content: toTable(
         (parsed.jd_questions ?? []).slice(0, 5).map((q) => [q.question, q.basis]),
         ["질문", "질문 의도 / JD 근거"],
@@ -61,7 +61,7 @@ export async function generateInterviewQuestions({ role, coverLetterText, apiKey
 
   if (hasProfile && (parsed.personal_questions ?? []).length > 0) {
     blocks.push({
-      label: "[예상 질문] 개인 역량 기반",
+      label: "예상 질문 개인 역량 기반",
       content: toTable(
         parsed.personal_questions.slice(0, 5).map((q) => [q.question, q.basis]),
         ["질문", "연결되는 경험/근거"],

@@ -119,16 +119,16 @@ export async function getJobIssues({
     );
   }
 
-  const blocks = [
-    {
-      label: "[안내]",
-      content:
-        "아래 내용은 Google 검색으로 찾은 실제 보도를 근거로 정리한 것입니다. 아래 '출처'를 펼치면 참고한 기사 원문으로 이동할 수 있습니다.",
-    },
-  ];
+  // 안내는 별도 블록 대신 notice로 보낸다. 블록 라벨이 늘어날수록 기계가 찍어낸 목록처럼 보인다.
+  const blocks = [];
 
   companyIssues.forEach((issue, i) => blocks.push(issueToBlock(issue, "회사 이슈", i + 1)));
   jobIssues.forEach((issue, i) => blocks.push(issueToBlock(issue, "직무 이슈", i + 1)));
 
-  return { blocks, sources, state: "ok" };
+  return {
+    blocks,
+    sources,
+    state: "ok",
+    notice: "검색으로 찾은 보도를 근거로 정리했습니다. 아래 출처에서 원문을 볼 수 있습니다.",
+  };
 }

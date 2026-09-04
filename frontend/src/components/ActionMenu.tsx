@@ -234,8 +234,8 @@ export default function ActionMenu({ sessionId, companyId, positionId, completed
 
         <div className="profile-panel">
           <p>
-            역량 진단을 위해 자기소개서를 입력해주세요 (포트폴리오는 선택). 입력 내용은 서버에 저장되지 않고
-            이번 세션에서만 사용된 뒤 폐기됩니다.
+            자기소개서를 붙여넣어 주세요. 포트폴리오는 선택입니다.
+            입력한 내용은 저장하지 않고 이번 진단에만 씁니다.
           </p>
           <label className="profile-field-label" htmlFor="cover-letter-input">
             자기소개서
@@ -270,7 +270,7 @@ export default function ActionMenu({ sessionId, companyId, positionId, completed
               파일 첨부
             </label>
             <span className="profile-file-hint">
-              PDF · DOCX · PPTX — 파일은 서버로 전송되지 않고 브라우저에서 텍스트만 추출합니다
+              PDF · DOCX · PPTX. 파일은 전송하지 않고 브라우저에서 글자만 읽습니다.
             </span>
           </div>
 

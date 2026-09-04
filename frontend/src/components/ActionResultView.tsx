@@ -37,7 +37,7 @@ export default function ActionResultView({ result, onPickRecommendation }: Props
                   {rec.position_name}
                 </span>
                 {rec.reason && <span className="rec-reason">{rec.reason}</span>}
-                <span className="rec-go">이 직무로 이어서 보기 →</span>
+                <span className="rec-go">이 직무로 이어서 보기</span>
               </button>
             </li>
           ))}
@@ -69,7 +69,7 @@ export default function ActionResultView({ result, onPickRecommendation }: Props
                 <span className="source-meta">{[s.outlet, s.date].filter(Boolean).join(' · ')}</span>
                 {s.url && (
                   <a href={s.url} target="_blank" rel="noreferrer">
-                    기사 원문 보기 →
+                    원문 보기
                   </a>
                 )}
               </li>
