@@ -1,13 +1,24 @@
+/* ───────────── 인트로 모션 (hanwha-recruit-intro.html 이식) ─────────────
+   점 3개가 모여 한화 CI가 되고 워드마크가 뜬다. 약 3.1초 뒤 페이드아웃. */
+
 .intro-splash {
+  /* 인트로는 전체가 브랜드 화면이라 한화체를 그대로 쓴다 */
+  font-family: 'Hanwha', 'Pretendard Variable', sans-serif;
   position: fixed;
   inset: 0;
   z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #ffffff;
+  overflow: hidden;
+  isolation: isolate;
+  background:
+    linear-gradient(180deg, rgba(6, 8, 14, 0.45), rgba(6, 8, 14, 0.62)),
+    url('/background.webp') center / cover no-repeat;
+  color: #ffffff;
   opacity: 1;
   transition: opacity 0.7s ease;
+
+  --intro-orange: #f47920;
+  --intro-peach: #f7b083;
+  --intro-salmon: #f79b6d;
 }
 
 .intro-splash-fade {
@@ -15,26 +26,320 @@
   pointer-events: none;
 }
 
-.intro-splash-logo {
-  width: 220px;
-  max-width: 60vw;
-  height: auto;
+/* 가운데 은은한 발광 */
+.intro-splash::before {
+  content: '';
+  position: absolute;
+  width: min(70vmin, 720px);
+  height: min(70vmin, 720px);
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(242, 100, 34, 0.22), transparent 67%);
   opacity: 0;
-  transform: scale(0.92);
-  animation: intro-logo-in 0.5s ease forwards;
+  animation: intro-glow 2.8s ease forwards;
 }
 
-@keyframes intro-logo-in {
-  to {
-    opacity: 1;
-    transform: scale(1);
+.intro-grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.08;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.6) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.6) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: linear-gradient(to bottom, #000, transparent 85%);
+}
+
+/* 로고(.intro-piece)를 화면 정중앙에 두고, 큰 텍스트는 그 위쪽에 붙인다.
+   bottom 기준이라 텍스트가 길어져도 로고 위치는 흔들리지 않는다. */
+.intro-copy {
+  position: absolute;
+  z-index: 4;
+  left: 0;
+  right: 0;
+  bottom: calc(50% + 118px);
+  padding: 0 4vw;
+  text-align: center;
+}
+
+.intro-kicker {
+  margin: 0 0 18px;
+  color: var(--intro-orange);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  font-weight: 700;
+}
+
+/* 한 줄로 길게. 이 문구(18자)는 폭이 글자크기의 약 26배라, 좌우 여백 8vw를 빼면
+   3.4vw 이하여야 한 줄에 들어간다. */
+.intro-copy h1 {
+  margin: 0;
+  font-size: clamp(15px, 3.4vw, 56px);
+  line-height: 1.16;
+  letter-spacing: -0.022em;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* 작은 텍스트는 로고·워드마크 아래에 한 줄로 */
+.intro-lede {
+  position: absolute;
+  z-index: 4;
+  left: 0;
+  right: 0;
+  top: calc(50% + 190px);
+  margin: 0;
+  padding: 0 4vw;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.82);
+  font-weight: 300;
+  font-size: clamp(12px, 1.4vw, 19px);
+  line-height: 1.75;
+  white-space: nowrap;
+}
+
+.intro-piece {
+  position: absolute;
+  z-index: 1;
+  width: 180px;
+  height: 164px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(var(--intro-scale, 1.25));
+}
+
+/* 고리 3개. left/top·크기·최종 회전각은 실제 CI(154x140) 픽셀에서 뽑은 값이다.
+   .intro-piece(180x164) 안에서 로고 이미지는 좌우 13px, 상하 12px 안쪽에 놓이므로
+   CI 좌표에 그만큼 더해 배치했다. */
+.intro-ring {
+  position: absolute;
+  border-radius: 50%;
+  border-style: solid;
+  background: none;
+  opacity: 0;
+}
+
+.intro-ring-a {
+  left: 6px;
+  top: 15px;
+  width: 144px;
+  height: 102px;
+  border-width: 8px;
+  border-color: var(--intro-orange);
+  animation: intro-ring-a 2.8s cubic-bezier(0.24, 0.78, 0.18, 1) forwards;
+}
+
+.intro-ring-b {
+  left: 57px;
+  top: 78px;
+  width: 95px;
+  height: 85px;
+  border-width: 7px;
+  border-color: var(--intro-salmon);
+  animation: intro-ring-b 2.8s 0.1s cubic-bezier(0.24, 0.78, 0.18, 1) forwards;
+}
+
+.intro-ring-c {
+  left: 53px;
+  top: 60px;
+  width: 107px;
+  height: 78px;
+  border-width: 7px;
+  border-color: var(--intro-peach);
+  animation: intro-ring-c 2.8s 0.2s cubic-bezier(0.24, 0.78, 0.18, 1) forwards;
+}
+
+.intro-logo {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 154px;
+  height: 140px;
+  opacity: 0;
+  animation: intro-logo 2.8s 0.3s ease forwards;
+}
+
+.intro-wordmark {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  top: calc(50% + 104px);
+  transform: translateX(-50%) translateY(10px);
+  opacity: 0;
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(34px, 4.4vw, 56px);
+  font-weight: 400;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  animation: intro-word 2.8s cubic-bezier(0.3, 0.75, 0.2, 1) forwards;
+}
+
+.intro-skip {
+  position: absolute;
+  z-index: 5;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 0;
+  padding: 6px 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.75);
+  font-weight: 700;
+}
+
+.intro-skip:focus-visible {
+  outline: 3px solid var(--intro-peach);
+  outline-offset: 3px;
+}
+
+/* 각 고리는 다른 방향에서 회전하며 날아와 CI 각도(-28 / -39 / 16도)에 안착한 뒤,
+   실제 CI 이미지가 겹쳐 올라오는 동안 서서히 사라진다. */
+/* 마지막 사라지는 구간은 linear로 잡는다. 전체 이징(cubic-bezier)이 앞이 빨라서
+   그대로 두면 고리가 로고보다 먼저 사라져 교차 지점이 잠깐 옅어진다. */
+@keyframes intro-ring-a {
+  0% { opacity: 0; transform: translate(-190px, 120px) rotate(-170deg) scale(0.35); }
+  16% { opacity: 1; }
+  60% { opacity: 1; transform: translate(0, 0) rotate(-28deg) scale(1); }
+  72% { opacity: 1; transform: translate(0, 0) rotate(-28deg) scale(1); animation-timing-function: linear; }
+  92%, 100% { opacity: 0; transform: translate(0, 0) rotate(-28deg) scale(1); }
+}
+
+@keyframes intro-ring-b {
+  0% { opacity: 0; transform: translate(170px, 150px) rotate(135deg) scale(0.35); }
+  18% { opacity: 1; }
+  62% { opacity: 1; transform: translate(0, 0) rotate(-39deg) scale(1); }
+  72% { opacity: 1; transform: translate(0, 0) rotate(-39deg) scale(1); animation-timing-function: linear; }
+  92%, 100% { opacity: 0; transform: translate(0, 0) rotate(-39deg) scale(1); }
+}
+
+@keyframes intro-ring-c {
+  0% { opacity: 0; transform: translate(40px, -180px) rotate(-95deg) scale(0.35); }
+  20% { opacity: 1; }
+  64% { opacity: 1; transform: translate(0, 0) rotate(16deg) scale(1); }
+  72% { opacity: 1; transform: translate(0, 0) rotate(16deg) scale(1); animation-timing-function: linear; }
+  92%, 100% { opacity: 0; transform: translate(0, 0) rotate(16deg) scale(1); }
+}
+
+/* 고리가 제자리를 잡은 뒤 실제 CI가 그 위로 서서히 올라온다.
+   고리와 크기가 어긋나 보이면 안 되므로 여기서는 scale을 건드리지 않고 투명도만 바꾼다. */
+@keyframes intro-logo {
+  0%, 58% { opacity: 0; animation-timing-function: linear; }
+  86%, 100% { opacity: 1; }
+}
+
+@keyframes intro-word {
+  0%, 76% { opacity: 0; transform: translateX(-50%) translateY(10px); }
+  90%, 100% { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+@keyframes intro-glow {
+  0%, 36% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+  65%, 100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* 좁은 화면에서는 한 줄을 고집하면 글자가 읽기 힘들 만큼 작아진다. 여기서만 줄바꿈을 허용한다. */
+@media (max-width: 640px) {
+  .intro-copy { bottom: calc(50% + 104px); }
+  .intro-copy h1 { white-space: normal; word-break: keep-all; font-size: 26px; }
+  .intro-piece { --intro-scale: 0.95; }
+  .intro-wordmark { top: calc(50% + 84px); font-size: 30px; }
+  .intro-lede { top: calc(50% + 150px); white-space: normal; word-break: keep-all; font-size: 14px; }
+}
+
+@media (max-height: 640px) {
+  .intro-copy { bottom: calc(50% + 104px); }
+  .intro-piece { --intro-scale: 0.95; }
+  .intro-wordmark { top: calc(50% + 84px); }
+  .intro-lede { top: calc(50% + 150px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intro-splash *,
+  .intro-splash *::before,
+  .intro-splash *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
   }
+  .intro-ring { opacity: 0; }
+  .intro-logo { opacity: 1; }
+  .intro-wordmark { opacity: 1; transform: translateX(-50%); }
+}
+
+/* 화면 전체를 viewport 높이에 고정한다. 페이지 자체는 스크롤되지 않고,
+   실제로 스크롤되는 곳은 .chat-window 하나뿐이다 (사이드바는 넘칠 때만). */
+#root {
+  display: flex;
+  flex-direction: column;
+  height: 100svh;
+  overflow: hidden;
+}
+
+/* 상단 Header — hanwhain.com처럼 화면 전체 폭을 쓰는 흰 내비 바.
+   떠 있는 카드가 아니라 아래쪽 실선 하나로 본문과 나뉜다. */
+.site-header {
+  flex: 0 0 auto;
+  width: 100%;
+  margin: 0;
+  padding: 14px 24px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.site-header-inner {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  width: min(1400px, 100% - 48px);
+  margin: 0 auto;
+}
+
+.site-brand {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-right: 20px;
+  border-right: 1px solid var(--border);
+}
+
+/* 가운데 검색 영역이 남는 가로 공간을 모두 차지해 로고 영역과 한 줄로 이어진다 */
+.site-search {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.site-search-row {
+  display: flex;
+  gap: 8px;
+}
+
+.site-actions {
+  flex: 0 0 auto;
+  align-self: flex-start;
+}
+
+/* 헤더 아래: 왼쪽 챗봇 카드 + 오른쪽 질문 목록 */
+.layout {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: min(1400px, 100% - 48px);
+  margin: 20px auto;
+  display: flex;
+  gap: 16px;
 }
 
 .app {
-  max-width: 760px;
-  margin: 32px auto;
-  height: calc(100dvh - 64px);
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   background: var(--surface);
@@ -42,18 +347,6 @@
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
   overflow: hidden;
-}
-
-.header {
-  padding: 22px 24px 16px;
-  border-bottom: 1px solid var(--border);
-}
-
-.header-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
 }
 
 .brand {
@@ -66,34 +359,51 @@
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  background: #ffffff;
-  border-radius: var(--radius-sm);
-  padding: 6px 10px;
-  box-shadow: var(--shadow-sm);
 }
 
 .brand-logo {
   display: block;
-  height: 22px;
+  height: 30px;
   width: auto;
 }
 
-.header h1 {
+.site-header h1 {
   margin: 0;
-  font-size: 1.2rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  font-family: 'Hanwha', 'Pretendard Variable', sans-serif;
+  font-size: 1.62rem;
+  font-weight: 500;
+  letter-spacing: -0.022em;
+  line-height: 1.2;
   color: var(--text);
 }
 
-.header h1 .accent {
+.site-header h1 .accent {
   color: var(--accent);
 }
 
-.header p {
-  margin: 3px 0 0;
+.site-header p {
+  margin: 4px 0 0;
   color: var(--text-muted);
   font-size: 0.84rem;
+}
+
+.brand-link {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 8px;
+  padding: 7px 16px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.brand-link:hover {
+  background: var(--accent);
+  color: var(--accent-contrast);
 }
 
 .reset-btn {
@@ -102,8 +412,8 @@
   background: var(--surface);
   color: var(--text-muted);
   border-radius: var(--radius-sm);
-  padding: 6px 12px;
-  font-size: 0.78rem;
+  padding: 7px 16px;
+  font-size: 0.8rem;
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
@@ -114,24 +424,8 @@
   color: var(--text);
 }
 
-.job-form {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin: 16px 24px 0;
-  padding: 14px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-}
-
-.job-form-row {
-  display: flex;
-  gap: 8px;
-}
-
-.job-form select {
-  flex: 1;
+.site-search select {
+  flex: 0 0 190px;
   min-width: 0;
   padding: 9px 10px;
   border-radius: var(--radius-sm);
@@ -142,8 +436,8 @@
   font-size: 0.86rem;
 }
 
-.job-form-row input {
-  flex: 1;
+.site-search input {
+  flex: 1 1 auto;
   min-width: 0;
   padding: 9px 10px;
   border-radius: var(--radius-sm);
@@ -155,24 +449,24 @@
   outline: none;
 }
 
-.job-form-row input:focus {
+.site-search input:focus {
   border-color: var(--accent);
 }
 
-.job-form-row button[type='submit'] {
+.site-search button[type='submit'] {
   flex-shrink: 0;
-  padding: 9px 16px;
+  padding: 9px 20px;
   border-radius: var(--radius-sm);
   border: none;
   background: var(--accent);
   color: var(--accent-contrast);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.86rem;
   cursor: pointer;
   white-space: nowrap;
 }
 
-.job-form-row button[type='submit']:disabled {
+.site-search button[type='submit']:disabled {
   opacity: 0.45;
   cursor: default;
 }
@@ -189,9 +483,9 @@
   background: var(--chip-bg);
   color: var(--text-muted);
   border-radius: var(--radius-sm);
-  padding: 5px 10px;
-  font-size: 0.76rem;
-  font-weight: 500;
+  padding: 6px 13px;
+  font-size: 0.78rem;
+  font-weight: 400;
   cursor: pointer;
   white-space: nowrap;
 }
@@ -207,8 +501,10 @@
 }
 
 .chat-window {
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
+  scroll-behavior: smooth;
   padding: 4px 24px 20px;
 }
 
@@ -230,14 +526,17 @@
   border-bottom: none;
 }
 
+/* 질문은 답변보다 크고 굵게 — 어디서 새 질문이 시작되는지 한눈에 보이게 한다 */
 .entry-query {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  font-size: 0.9rem;
-  font-weight: 600;
+  gap: 9px;
+  font-size: 1.06rem;
+  font-weight: 500;
+  letter-spacing: -0.022em;
+  line-height: 1.45;
   color: var(--text);
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .entry-query::before {
@@ -246,20 +545,20 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 17px;
-  height: 17px;
-  margin-top: 1px;
-  border-radius: 4px;
-  background: var(--accent-soft);
-  color: var(--accent);
-  font-size: 0.65rem;
+  width: 21px;
+  height: 21px;
+  margin-top: 2px;
+  border-radius: 5px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-size: 0.72rem;
   font-weight: 700;
 }
 
 .entry-answer {
   color: var(--text);
-  font-size: 0.9rem;
-  line-height: 1.7;
+  font-size: 0.88rem;
+  line-height: 1.75;
 }
 
 .entry-answer .typing {
@@ -284,12 +583,22 @@
   font-weight: 700;
 }
 
+.entry-answer h1,
+.entry-answer h2 {
+  font-size: 1.02rem;
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--border);
+}
+
 .entry-answer h3 {
-  font-size: 0.98rem;
+  font-size: 0.96rem;
+  color: var(--accent);
 }
 
 .entry-answer h4 {
-  font-size: 0.94rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  text-transform: none;
 }
 
 .entry-answer p {
@@ -373,12 +682,12 @@
 
 .input-row button {
   flex-shrink: 0;
-  padding: 9px 18px;
+  padding: 9px 22px;
   border-radius: var(--radius-sm);
   border: none;
   background: var(--accent);
   color: var(--accent-contrast);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.86rem;
   cursor: pointer;
 }
@@ -388,8 +697,20 @@
   cursor: default;
 }
 
+/* 입력창 바로 위에 고정되는 액션 버튼 영역.
+   자기소개서 입력 패널이 열리면 세로로 길어지므로, 높이를 제한하고
+   그 안에서만 스크롤시켜 입력창이 화면 밖으로 밀려나지 않게 한다. */
+/* 입력창 바로 위 액션 버튼 영역. 역량 진단 입력은 모달로 빠졌으므로
+   이 영역에는 버튼 4개만 들어가고 잘릴 내용이 없다. */
+.action-dock {
+  flex: 0 0 auto;
+  padding: 12px 24px;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+}
+
 .action-menu {
-  margin-top: 14px;
+  margin-top: 0;
 }
 
 .action-menu-grid {
@@ -403,7 +724,7 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 9px 10px;
+  padding: 10px 12px;
   border-radius: var(--radius-sm);
   border: 1px solid transparent;
   background: var(--accent);
@@ -443,11 +764,69 @@
   }
 }
 
-.profile-panel {
-  margin-top: 10px;
-  padding: 12px;
+/* 역량 진단 입력은 모달로 띄운다.
+   예전에는 이 패널을 .action-dock 안에 그렸는데, 도크가 max-height + overflow:auto라서
+   패널 아래쪽(파일 첨부 버튼·첨부 목록·제출 버튼)이 잘려 보이지 않았다.
+   <dialog showModal()>은 top layer에 올라가 조상의 overflow/height에 잘리지 않는다. */
+.profile-dialog {
+  width: min(600px, 100vw - 32px);
+  max-height: min(86svh, 760px);
+  margin: auto;
+  padding: 0;
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+.profile-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.profile-dialog-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.profile-dialog-head h2 {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 700;
+}
+
+.profile-dialog-close {
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: 1.35rem;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.profile-dialog-close:hover {
+  color: var(--accent);
+}
+
+/* 내용이 길어지면 이 영역 안에서만 스크롤된다 */
+.profile-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 16px;
   background: var(--bg);
 }
 
@@ -475,6 +854,145 @@
   font: inherit;
   font-size: 0.85rem;
   resize: vertical;
+}
+
+/* 포트폴리오 파일 첨부 (§4.2) */
+
+.profile-file-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+/* 기본 file input은 숨기고 label을 버튼처럼 쓴다 (브라우저 기본 스타일이 패널과 안 맞음) */
+.profile-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.profile-file-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 16px;
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-sm);
+  background: var(--chip-bg);
+  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.profile-file-button:hover,
+.profile-file-input:focus-visible + .profile-file-button {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.profile-file-hint {
+  flex: 1 1 220px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.profile-file-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.profile-file-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--input-bg);
+  font-size: 0.78rem;
+}
+
+.profile-file-item.is-error {
+  border-color: rgba(255, 106, 0, 0.45);
+}
+
+.profile-file-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 45%;
+}
+
+.profile-file-status {
+  flex: 1;
+  color: var(--text-muted);
+}
+
+.profile-file-item.is-error .profile-file-status {
+  color: var(--accent);
+}
+
+.profile-file-remove {
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: 1rem;
+  line-height: 1;
+  padding: 2px 4px;
+  cursor: pointer;
+}
+
+.profile-file-remove:hover {
+  color: var(--accent);
+}
+
+/* 직무 적합도 점수 (§4.2) */
+
+.action-result-fit {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--chip-bg);
+}
+
+.action-result-fit-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.action-result-fit-score {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1;
+}
+
+.action-result-fit-score span {
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.action-result-fit-summary {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
 }
 
 .action-result-notice {
@@ -568,18 +1086,20 @@
 }
 
 .profile-actions {
+  flex: 0 0 auto;
   display: flex;
   gap: 8px;
-  margin-top: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
 }
 
 .profile-actions button {
-  padding: 8px 16px;
+  padding: 9px 20px;
   border-radius: var(--radius-sm);
   border: none;
   background: var(--accent);
   color: var(--accent-contrast);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.82rem;
   cursor: pointer;
 }
@@ -595,22 +1115,146 @@
   color: var(--text-muted);
 }
 
+/* ───────────── 질문 목록 사이드바 (Notion 목차 스타일) ───────────── */
+
+.qnav {
+  flex: 0 0 232px;
+  width: 232px;
+  /* flex 아이템의 기본 min-width는 auto다. 줄바꿈 없는 긴 질문이 하나라도 있으면
+     flex-basis를 무시하고 내용 폭만큼 벌어지므로 0으로 눌러야 232px가 지켜진다. */
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 14px 8px 14px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.qnav-title {
+  flex: 0 0 auto;
+  margin-bottom: 10px;
+  padding-right: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+/* 질문이 많아지면 이 목록 안에서만 스크롤된다 */
+.qnav-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 0 6px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.qnav-item {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 7px 8px;
+  border: none;
+  border-left: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.78rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.qnav-item:hover {
+  background: var(--chip-bg);
+  color: var(--text);
+}
+
+.qnav-item.is-active {
+  border-left-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.qnav-index {
+  flex-shrink: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+/* 긴 질문은 한 줄로 줄이고 말줄임표 처리 */
+.qnav-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 좁은 화면에서는 헤더를 세로로 쌓고 질문 목록은 숨긴다 */
+@media (max-width: 1080px) {
+  .site-header-inner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .site-brand {
+    padding-right: 0;
+    border-right: none;
+  }
+
+  .site-actions {
+    align-self: flex-end;
+    margin-top: -46px;
+  }
+
+  .qnav {
+    display: none;
+  }
+}
+
 @media (max-width: 640px) {
-  .app {
+  .site-header {
+    width: 100%;
     margin: 0;
-    height: 100dvh;
     border-radius: 0;
     border-left: none;
     border-right: none;
     box-shadow: none;
+    padding: 14px 16px;
   }
 
-  .header {
-    padding: 16px 16px 12px;
+  .site-search-row {
+    flex-wrap: wrap;
   }
 
-  .job-form {
-    margin: 14px 16px 0;
+  .site-search select {
+    flex: 1 1 100%;
+  }
+
+  .layout {
+    width: 100%;
+    margin: 0;
+  }
+
+  .app {
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    box-shadow: none;
   }
 
   .chat-window {

@@ -1,3 +1,7 @@
+/* 본문 UI는 Pretendard, 'Hanwha'는 서비스 제목과 인트로에만 쓴다.
+   한화체는 제목용 서체라 작은 글자에서 가독성이 떨어진다. */
+@import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css';
+
 @font-face {
   font-family: 'Hanwha';
   src:
@@ -29,42 +33,64 @@
 }
 
 :root {
-  --bg: #0a0d16;
-  --surface: #131829;
-  --text: #eef1f6;
-  --text-muted: #8b93a8;
-  --border: #242b45;
-  --accent: #ff6a00;
+  /* hanwhain.com 팔레트: 흰 면 + #F5F5F5 회색 면, 글자는 검정 투명도로 단계를 만든다.
+     강조색은 한화 CI 주황(#F47920)으로 인트로와 값을 맞췄다. */
+  --bg: #f5f5f5;
+  --surface: #ffffff;
+  --text: rgba(0, 0, 0, 0.87);
+  --text-muted: rgba(0, 0, 0, 0.54);
+  --border: rgba(0, 0, 0, 0.12);
+  --accent: #f47920;
   --accent-contrast: #ffffff;
-  --accent-soft: rgba(255, 106, 0, 0.16);
-  --input-bg: #0f1424;
-  --input-border: #2b3350;
-  --chip-bg: #1a2036;
+  --accent-soft: rgba(244, 121, 32, 0.12);
+  --input-bg: #ffffff;
+  --input-border: rgba(0, 0, 0, 0.23);
+  --chip-bg: #f5f5f5;
 
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
+  /* hanwhain.com 디자인 언어: 둥근 pill이 아니라 4px로 각지게, 면은 평평하게.
+     아이콘 버튼만 원형(50%)을 쓴다. */
+  --radius-sm: 4px;
+  --radius-md: 4px;
+  --radius-lg: 4px;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 20px 50px rgba(0, 0, 0, 0.5);
+  /* 광택 대신 얇은 경계선으로 면을 나눈다. 그림자는 존재만 알릴 정도로 낮춘다. */
+  --shadow-sm: none;
+  --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.06);
 
-  font: 15px/1.55 'Hanwha', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  color-scheme: dark;
+  font: 15px/1.55 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color-scheme: light;
 }
 
 * {
   box-sizing: border-box;
 }
 
+/* 폼 컨트롤은 기본적으로 페이지 서체를 상속하지 않아 Arial로 떨어진다 */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+/* 배경 사진은 흰 카드 뒤에 깔린다. 카드가 불투명이라 사진은 여백에서만 보이므로,
+   가장자리에서 글자와 부딪히지 않게 어두운 그라데이션을 얹어 톤을 눌러 둔다. */
 body {
   margin: 0;
   color: var(--text);
   background:
     linear-gradient(180deg, rgba(6, 8, 14, 0.4), rgba(6, 8, 14, 0.55)),
-    url('/background.jpg') center / cover no-repeat fixed;
+    url('/background.webp') center / cover no-repeat fixed;
   background-color: var(--bg);
 }
 
+/* 페이지 자체는 스크롤되지 않는다. 스크롤은 .chat-window(와 넘칠 때의 사이드바)만 담당한다. */
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+
 #root {
-  min-height: 100svh;
+  height: 100svh;
 }

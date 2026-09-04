@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import ReactMarkdown from 'react-markdown'
+import remarkBreaks from 'remark-breaks'
 import remarkGfm from 'remark-gfm'
 import hanwhaLogo from './assets/hanwha_logo.png'
 import ActionMenu, { type ActionKey, type ActionResult } from './components/ActionMenu'
@@ -65,8 +66,12 @@ function App() {
   const [resolvedMeta, setResolvedMeta] = useState<Record<number, { companyId: string; positionId: string }>>({})
   const [completedByCombo, setCompletedByCombo] = useState<Record<string, Set<ActionKey>>>({})
 
+  const [activeEntry, setActiveEntry] = useState(0)
+
   const abortRef = useRef<AbortController | null>(null)
   const chatEndRef = useRef<HTMLDivElement>(null)
+  const chatWindowRef = useRef<HTMLDivElement>(null)
+  const entryRefs = useRef<(HTMLDivElement | null)[]>([])
 
   // §9: 계열사명을 코드에 하드코딩하지 않고 data/*.json 기반 API에서 받아온다.
   useEffect(() => {
@@ -102,6 +107,30 @@ function App() {
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  // 오른쪽 질문 목록에서 "지금 보고 있는 질문"을 표시하기 위한 관찰.
+  // 대화 영역만 스크롤되므로 뷰포트가 아니라 .chat-window를 root로 잡는다.
+  useEffect(() => {
+    const root = chatWindowRef.current
+    const nodes = entryRefs.current.filter((node): node is HTMLDivElement => Boolean(node))
+    if (!root || nodes.length === 0) return
+
+    const observer = new IntersectionObserver(
+      (records) => {
+        const visible = records
+          .filter((r) => r.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0]
+        if (!visible) return
+        const index = nodes.indexOf(visible.target as HTMLDivElement)
+        if (index !== -1) setActiveEntry(index)
+      },
+      // 화면 위쪽 1/3에 걸친 항목을 "현재 질문"으로 본다.
+      { root, rootMargin: '0px 0px -66% 0px', threshold: 0 },
+    )
+
+    for (const node of nodes) observer.observe(node)
+    return () => observer.disconnect()
   }, [messages])
 
   const sendMessage = async (text: string) => {
@@ -181,6 +210,22 @@ function App() {
     entries.push({ query: messages[i], answer: messages[i + 1] })
   }
 
+  // 액션 버튼은 대화 흐름에 끼워 넣지 않고 입력창 위에 고정한다.
+  // 버튼을 누를 때마다 답변이 쌓이면서 버튼이 위로 밀려 올라가는 걸 막기 위함이다.
+  // 기준은 "가장 마지막으로 확정된 회사·직무"다.
+  const activeMeta = (() => {
+    for (let i = entries.length - 1; i >= 0; i -= 1) {
+      const meta = resolvedMeta[i]
+      if (!meta) continue
+      const answer = entries[i].answer
+      const hasAnswer = answer?.kind === 'action-result' || Boolean(answer?.content)
+      const answerReady = hasAnswer && !(isStreaming && i === entries.length - 1)
+      if (answerReady) return meta
+    }
+    return null
+  })()
+  const activeComboKey = activeMeta ? `${activeMeta.companyId}:${activeMeta.positionId}` : null
+
   const handleJobLookup = (e: FormEvent) => {
     e.preventDefault()
     const job = jobTitle.trim()
@@ -217,13 +262,19 @@ function App() {
     }
   }
 
+  const goToEntry = (index: number) => {
+    setActiveEntry(index)
+    entryRefs.current[index]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
   return (
     <>
       <IntroSplash />
-      <div className="app">
-      <header className="header">
-        <div className="header-top">
-          <div className="brand">
+
+      {/* 헤더는 챗봇 카드 밖, 페이지 최상단에 독립적으로 떠 있는 가로형 영역이다. */}
+      <header className="site-header">
+        <div className="site-header-inner">
+          <div className="site-brand">
             <span className="brand-logo-wrap">
               <img src={hanwhaLogo} alt="Hanwha" className="brand-logo" />
             </span>
@@ -232,98 +283,109 @@ function App() {
                 <span className="accent">한화</span> 직무 가이드
               </h1>
               <p>회사와 직무를 입력하면 하는 일 · 필요 역량 · 최근 이슈를 알려드려요</p>
+              <a className="brand-link" href="https://www.hanwhain.com/" target="_blank" rel="noreferrer">
+                한화 채용사이트 바로가기 →
+              </a>
             </div>
           </div>
-          <button className="reset-btn" onClick={resetChat}>
-            새 대화
-          </button>
+
+          <form className="site-search" onSubmit={handleJobLookup}>
+            <div className="site-search-row">
+              <select value={companyId} onChange={(e) => setCompanyId(e.target.value)}>
+                {companies.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name_ko}
+                  </option>
+                ))}
+              </select>
+              <input
+                value={jobTitle}
+                onChange={(e) => setJobTitle(e.target.value)}
+                placeholder="직무명을 입력하세요 (예: 생산관리, 해외영업...)"
+                disabled={isStreaming}
+              />
+              <button type="submit" disabled={isStreaming || !jobTitle.trim() || !resolvedCompanyName}>
+                직무 알아보기
+              </button>
+              {/* 폼 안에 있으므로 type="button"이 없으면 클릭 시 직무 조회가 제출된다 */}
+              <button type="button" className="reset-btn" onClick={resetChat}>
+                새 대화
+              </button>
+            </div>
+            <div className="job-chips">
+              {jobs.map((job) => (
+                <button
+                  type="button"
+                  key={job.id}
+                  className="chip"
+                  onClick={() => setJobTitle(job.name_ko)}
+                  disabled={isStreaming}
+                >
+                  {job.name_ko}
+                </button>
+              ))}
+            </div>
+          </form>
+
         </div>
       </header>
 
-      <form className="job-form" onSubmit={handleJobLookup}>
-        <div className="job-form-row">
-          <select value={companyId} onChange={(e) => setCompanyId(e.target.value)}>
-            {companies.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name_ko}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="job-form-row">
-          <input
-            value={jobTitle}
-            onChange={(e) => setJobTitle(e.target.value)}
-            placeholder="직무명을 입력하세요 (예: 생산관리, 해외영업...)"
-            disabled={isStreaming}
-          />
-          <button type="submit" disabled={isStreaming || !jobTitle.trim() || !resolvedCompanyName}>
-            직무 알아보기
-          </button>
-        </div>
-        <div className="job-chips">
-          {jobs.map((job) => (
-            <button
-              type="button"
-              key={job.id}
-              className="chip"
-              onClick={() => setJobTitle(job.name_ko)}
-              disabled={isStreaming}
-            >
-              {job.name_ko}
-            </button>
-          ))}
-        </div>
-      </form>
-
-      <div className="chat-window">
+      <div className="layout">
+        <main className="app">
+      <div className="chat-window" ref={chatWindowRef}>
         <p className="intro">{messages[0].content}</p>
         {entries.map((entry, index) => {
-          const meta = resolvedMeta[index]
-          const comboKey = meta ? `${meta.companyId}:${meta.positionId}` : null
-          const hasAnswer = entry.answer?.kind === 'action-result' || Boolean(entry.answer?.content)
-          const answerReady = hasAnswer && !(isStreaming && index === entries.length - 1)
-
           return (
-            <div key={index} className="entry">
+            <div
+              key={index}
+              className="entry"
+              id={`entry-${index}`}
+              ref={(node) => {
+                entryRefs.current[index] = node
+              }}
+            >
               <div className="entry-query">{entry.query.content}</div>
               <div className="entry-answer">
                 {entry.answer?.kind === 'action-result' && entry.answer.result ? (
                   <ActionResultView result={entry.answer.result} />
                 ) : entry.answer?.content ? (
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{entry.answer.content}</ReactMarkdown>
+                  <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{entry.answer.content}</ReactMarkdown>
                 ) : isStreaming && index === entries.length - 1 ? (
                   <span className="typing">답변을 정리하는 중...</span>
                 ) : null}
               </div>
-
-              {meta && answerReady && comboKey && (
-                <ActionMenu
-                  sessionId={sessionId}
-                  companyId={meta.companyId}
-                  positionId={meta.positionId}
-                  completed={completedByCombo[comboKey] ?? new Set()}
-                  onComplete={(action) =>
-                    setCompletedByCombo((prev) => {
-                      const next = new Set(prev[comboKey] ?? [])
-                      next.add(action)
-                      return { ...prev, [comboKey]: next }
-                    })
-                  }
-                  onResult={(_action, label, result) => {
-                    setMessages((prev) => [
-                      ...prev,
-                      { role: 'user', content: label },
-                      { role: 'assistant', content: '', kind: 'action-result', result },
-                    ])
-                  }}
-                />
-              )}
             </div>
           )
         })}
         <div ref={chatEndRef} />
       </div>
+
+      {activeMeta && activeComboKey && (
+        <div className="action-dock">
+          <ActionMenu
+            // 회사·직무가 바뀌면 입력하던 자기소개서·첨부가 남지 않도록 컴포넌트를 새로 만든다
+            key={activeComboKey}
+            sessionId={sessionId}
+            companyId={activeMeta.companyId}
+            positionId={activeMeta.positionId}
+            completed={completedByCombo[activeComboKey] ?? new Set()}
+            onComplete={(action) =>
+              setCompletedByCombo((prev) => {
+                const next = new Set(prev[activeComboKey] ?? [])
+                next.add(action)
+                return { ...prev, [activeComboKey]: next }
+              })
+            }
+            onResult={(_action, label, result) => {
+              setMessages((prev) => [
+                ...prev,
+                { role: 'user', content: label },
+                { role: 'assistant', content: '', kind: 'action-result', result },
+              ])
+            }}
+          />
+        </div>
+      )}
 
       <form className="input-row" onSubmit={handleFollowUp}>
         <input
@@ -336,6 +398,29 @@ function App() {
           {isStreaming ? '답변 중...' : '전송'}
         </button>
       </form>
+        </main>
+
+        {/* Notion 목차처럼 동작하는 질문 목록. 대화 영역만 스크롤되므로 이 카드는 늘 화면에 남는다. */}
+        {entries.length > 0 && (
+          <aside className="qnav" aria-label="질문 목록">
+            <div className="qnav-title">질문 목록</div>
+            <ol className="qnav-list">
+              {entries.map((entry, index) => (
+                <li key={index}>
+                  <button
+                    type="button"
+                    className={`qnav-item${index === activeEntry ? ' is-active' : ''}`}
+                    onClick={() => goToEntry(index)}
+                    title={entry.query.content}
+                  >
+                    <span className="qnav-index">{index + 1}</span>
+                    <span className="qnav-text">{entry.query.content}</span>
+                  </button>
+                </li>
+              ))}
+            </ol>
+          </aside>
+        )}
       </div>
     </>
   )
